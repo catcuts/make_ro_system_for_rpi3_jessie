@@ -151,3 +151,5 @@ ___
 　　首先：登入树莓派，进入 `release_make_ro_system`。
   
 　　然后：`bash make_ro_system_sp.sh`
+
+附：[第 3 种方式的操作视频](https://www.bilibili.com/video/av28346666/)
