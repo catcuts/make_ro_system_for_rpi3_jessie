@@ -38,6 +38,10 @@ while [ checking_not_ok ]; do
     echo -ne "\r                                        \r"
 done
 
+if [ "$1" == "only-mysql" ]; then
+    exit 0
+fi
+
 ps aux | grep iptalk.py | awk '{print$2}' | xargs kill -9
 
 # # this function is called when Ctrl-\ is sent

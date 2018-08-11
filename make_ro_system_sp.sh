@@ -63,82 +63,89 @@ _TIME="_$TIME"
 
 # ____________________________________________________________________________
 
-if [ "$precondition" == "local" ]; then
+init(){
+    if [ "$precondition" == "local" ]; then
 
-    echo -ne "[ info ] 检查网络 ..."
+        echo -ne "[ info ] 检查网络 ..."
 
-        ret_code=`curl -I -s --connect-timeout 5 www.baidu.com -w %{http_code} | tail -n1`
-        # ret_code maybe none so insert an x
-        if [ "$ret_code" != "200" ]; then
-            echo -e "\n${Red}[ erro ]${NC} 检查网络 异常 . 中止 ."
+            ret_code=`curl -I -s --connect-timeout 5 www.baidu.com -w %{http_code} | tail -n1`
+            # ret_code maybe none so insert an x
+            if [ "$ret_code" != "200" ]; then
+                echo -e "\n${Red}[ erro ]${NC} 检查网络 异常 . 中止 ."
+                exit 1
+            fi
+
+        echo -e "正常 ."
+        
+    # ____________________________________________________________________________
+
+        echo -ne "[ info ] 确认以下步骤:\n \
+    1. SD 卡扩容\n \
+    2. bash /home/pi/src/stop.sh\n \
+    3. apt-get update\n \
+    4. bash /home/pi/src/stop.sh\n \
+        已按顺序完成 ? [yes/no] "
+        read done_prepare
+        if [ "$done_prepare" != "yes" ]; then
+            echo -e "你选择了未完成($done_prepare 而非 yes) . 中止 . 确认完成以上步骤后再重试 ."
+            exit 1
+        fi
+    fi
+
+    # ____________________________________________________________________________
+
+    echo -e "[ info ] 检查硬盘 ..."
+
+        selected_hd=
+
+        sddevlist=`ls /dev/sd*`
+
+        for dev in $sddevlist; do
+            fdisk -l $dev
+            sddevsize=`fdisk -l $dev | sed -n "s|Disk $dev: \([^,]*\) GiB, .*|\1|p"`
+            sddevsize=`awk "BEGIN{print $sddevsize+0 }"`
+            if [ `echo $sddevsize 900 | awk '{if($1>=$2){printf"ge"}else{printf"lt"}}'` == "ge" ]; then
+                echo -ne "上面这个是你的硬盘吗（大小: $sddevsize GB） ? [y/n] "
+                read confirmed
+                if [ "$confirmed" == "y" ]; then
+                    echo -e "用户选择了硬盘: $dev"
+                    selected_hd=$dev
+                fi
+            fi
+        done 
+
+        if [ -z $selected_hd ]; then
+            echo -e "${Red}[ erro ]${NC} 没有可用的硬盘 . 中止 ."
             exit 1
         fi
 
-    echo -e "正常 ."
-    
-# ____________________________________________________________________________
+    echo -e "[ info ] 检查硬盘 正常 ."
 
-    echo -ne "[ info ] 确认以下步骤:\n \
-1. SD 卡扩容\n \
-2. bash /home/pi/src/stop.sh\n \
-3. apt-get update\n \
-4. bash /home/pi/src/stop.sh\n \
-    已按顺序完成 ? [yes/no] "
-    read done_prepare
-    if [ "$done_prepare" != "yes" ]; then
-        echo -e "你选择了未完成($done_prepare 而非 yes) . 中止 . 确认完成以上步骤后再重试 ."
-        exit 1
-    fi
-fi
+    # ____________________________________________________________________________
 
-# ____________________________________________________________________________
+    echo -ne "[ info ] 复制核心文件到 /home/pi ..."
 
-echo -e "[ info ] 检查硬盘 ..."
+        for file in check_hd.sh start_iptalk_on_rpi3.sh sweep_old_iptalk_database_bkups.sh backup_iptalk_database.sh; do
+            cp -p $base_dir/$file /home/pi
+            chmod +x /home/pi/$file
+        done
 
-    selected_hd=
+    echo -e "完毕 ."
 
-    sddevlist=`ls /dev/sd*`
+    # ____________________________________________________________________________
 
-    for dev in $sddevlist; do
-        fdisk -l $dev
-        sddevsize=`fdisk -l $dev | sed -n "s|Disk $dev: \([^,]*\) GiB, .*|\1|p"`
-        sddevsize=`awk "BEGIN{print $sddevsize+0 }"`
-        if [ `echo $sddevsize 900 | awk '{if($1>=$2){printf"ge"}else{printf"lt"}}'` == "ge" ]; then
-            echo -ne "上面这个是你的硬盘吗（大小: $sddevsize GB） ? [y/n] "
-            read confirmed
-            if [ "$confirmed" == "y" ]; then
-                echo -e "用户选择了硬盘: $dev"
-                selected_hd=$dev
-            fi
-        fi
-    done 
-
-    if [ -z $selected_hd ]; then
-        echo -e "${Red}[ erro ]${NC} 没有可用的硬盘 . 中止 ."
-        exit 1
+    sbs="yes"
+    if [ "$1" == "notstepbystep" ]; then
+        sbs="no"
+    else
+        echo -e "[ info ] 已启用: 步步模式(step-by-step mode) ."
     fi
 
-echo -e "[ info ] 检查硬盘 正常 ."
-
-# ____________________________________________________________________________
-
-echo -ne "[ info ] 复制核心文件到 /home/pi ..."
-
-    for file in check_hd.sh start_iptalk_on_rpi3.sh sweep_old_iptalk_database_bkups.sh backup_iptalk_database.sh; do
-        cp -p $base_dir/$file /home/pi
-        chmod +x /home/pi/$file
-    done
-
-echo -e "完毕 ."
-
-# ____________________________________________________________________________
-
-sbs="yes"
-if [ "$1" == "notstepbystep" ]; then
-    sbs="no"
-else
-    echo -e "[ info ] 已启用: 步步模式(step-by-step mode) ."
-fi
+    PARTUUID1=`blkid /dev/mmcblk0p1 | sed 's/.*PARTUUID=\"\(.*\)\"/\1/'`
+    PARTUUID2=`blkid /dev/mmcblk0p2 | sed 's/.*PARTUUID=\"\(.*\)\"/\1/'`
+    HDUUID=`blkid $selected_hd | sed -n 's/.*UUID=\"\([^"]*\)\".*/\1/p'`
+    HDTYPE=`blkid $selected_hd | sed 's/.*TYPE="\([^"]*\)".*/\1/'`
+}
 
 # 每一步执行完毕时调用, 则 step 自增 1 (如: 第 1 步执行完毕, step=2, 即当前位(开始)于第 2 步)
 next(){
@@ -156,11 +163,6 @@ next(){
         fi
     fi
 }
-
-PARTUUID1=`blkid /dev/mmcblk0p1 | sed 's/.*PARTUUID=\"\(.*\)\"/\1/'`
-PARTUUID2=`blkid /dev/mmcblk0p2 | sed 's/.*PARTUUID=\"\(.*\)\"/\1/'`
-HDUUID=`blkid $selected_hd | sed -n 's/.*UUID=\"\([^"]*\)\".*/\1/p'`
-HDTYPE=`blkid $selected_hd | sed 's/.*TYPE="\([^"]*\)".*/\1/'`
 
 # ____________________________________________________________________________
 # winux
@@ -196,8 +198,12 @@ step1(){
     echo "完毕 ."
 
     echo -ne "[ info ] 停止 mysql 服务 ..."
-    
-        /etc/init.d/mysql stop > /dev/null
+        
+        if [ "$precondition" == "winux" ]; then
+            ps aux | grep mysql | awk '{print$2}' | xargs kill -TERM
+        else
+            /etc/init.d/mysql stop > /dev/null
+        fi
 
     echo -e "完毕 ."
 
@@ -468,9 +474,10 @@ step8(){
 
         iptalksqlsize=`ls -l $iptalksql | awk '{print$5}'`
 
-        if [ "$iptalksqlsize" == "0" ]; then
+        if [ "$iptalksqlsize" == "0" -o "$iptalksqlsize" == "" ]; then
             echo -e "${Brown_Orange}[ warn ]${NC} 没有原数据库可以导入 ."
         else
+            bash start_iptalk_on_rpi3.sh only-mysql
             echo -e "[ info ] 导入原数据库 ..."
             mysql -uroot -proot -e 'drop database iptalk'
             mysql -uroot -proot iptalk < $iptalksql
@@ -717,21 +724,44 @@ step19(){
 # ____________________________________________________________________________
 
 if [ "$precondition" == "local" ]; then
-    for k in $( seq $step $max_step )
-    do
-        echo -e "\n----------- 第 $step / $max_step 步 -----------"
-        step$k
-        echo -e "----------- ----------- -----------"
-        next
-    done
-elif [ "$precondition" == "winux" ]; then
+
+    if [ "`mount | grep '/dev/mmcblk0p2 on / type ext4 (ro,noatime,data=ordered)'`" != "" ]; then
+        echo -e "[ info ] 你是从 windows 过来的吧, 没加 windows 参数 . 算了 . 继续 ."
+        precondition=winux
+    else
+
+        init
+
+        for k in $( seq $step $max_step )
+        do
+            echo -e "\n----------- 第 $step / $max_step 步 -----------"
+            step$k
+            echo -e "----------- ----------- -----------"
+            next
+        done
+    fi
+
+fi
+
+if [ "$precondition" == "winux" ]; then
+
+    # 这个流程可以重复执行
+
+    mount -o remount,rw /
+    mount -o remount,rw /boot
+
+    init
+
     for k in 1 2 3 4 8 9 10 19
     do
-        echo -e "\n----------- 第 $step / $max_step 步 -----------"
+        echo -e "\n----------- 第 $k / $max_step 步 -----------"
         step$k
         echo -e "----------- ----------- -----------"
         next
     done
+
+    mount -o remount,ro /
+    mount -o remount,ro /boot
 fi
 
 echo -e "\033[31m\033[01m\033[05m恭喜你, 圆满完成 .\033[0m"
