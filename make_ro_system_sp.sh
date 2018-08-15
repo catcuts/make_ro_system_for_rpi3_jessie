@@ -26,10 +26,36 @@ White="\033[1;37m"
 NC='\033[0m' # No Color
 
 # ____________________________________________________________________________
+
+desc_step1(){ echo "停止 iptalk 和 备份 iptalk 数据库 然后停止 mysql";}
+desc_step2(){ echo "备份 mysql 数据 和 iptalk 资源";}
+desc_step3(){ echo "挂载硬盘";}
+desc_step4(){ echo "移动 mysql 数据 和 iptalk 资源 到 硬盘, 并创建从 只读系统 到 移动硬盘 的符号连接";}
+desc_step5(){ echo "配置 mysql 运行参数";}
+desc_step6(){ echo "设置 定时清理 和 定时备份 任务";}
+desc_step7(){ echo "配置 iptalk 进程为启动项";}
+desc_step8(){
+    if [ "$precondition" == "winux" ]; then echo -e "导入数据库"; fi
+    if [ "$precondition" == "local" ]; then echo -e "安装依赖"; fi
+}
+desc_step9(){ echo "试运行";}
+desc_step10(){ echo "修改 /boot/cmdline.txt 和 /etc/fstab";}
+desc_step11(){ echo "移除无关软件与服务";}
+desc_step12(){ echo "用 busybox 替代默认日志管理器";}
+desc_step13(){ echo "停用关于 交换分区 和 文件系统 的检查, 并设置为 只读";}
+desc_step14(){ echo "移动部分系统文件到临时文件系统";}
+desc_step15(){ echo "移动部分锁定文件到临时文件系统";}
+desc_step16(){ echo "修改 /etc/cron.hourly/fake-hwclock";}
+desc_step17(){ echo "移除部分启动脚本";}
+desc_step18(){ echo "设置 dhcpcd 服务超时(20s)";}
+desc_step19(){ echo "重启确认";}
+
+# ____________________________________________________________________________
+
 check_params(){
     if [ `echo $1 $max_step | awk '{if($1>=$2 || $1<=0){printf"sb"}else{printf"ok"}}'` == "sb" ]; then
         echo -e "${Red}[ erro ]${NC} 步数越界! 中止 ."
-        exit 1
+        end 1
     else
         echo 很正常啊
     fi
@@ -72,7 +98,7 @@ init(){
             # ret_code maybe none so insert an x
             if [ "$ret_code" != "200" ]; then
                 echo -e "\n${Red}[ erro ]${NC} 检查网络 异常 . 中止 ."
-                exit 1
+                end 1
             fi
 
         echo -e "正常 ."
@@ -88,7 +114,7 @@ init(){
         read done_prepare
         if [ "$done_prepare" != "yes" ]; then
             echo -e "你选择了未完成($done_prepare 而非 yes) . 中止 . 确认完成以上步骤后再重试 ."
-            exit 1
+            end 1
         fi
     fi
 
@@ -116,7 +142,7 @@ init(){
 
         if [ -z $selected_hd ]; then
             echo -e "${Red}[ erro ]${NC} 没有可用的硬盘 . 中止 ."
-            exit 1
+            end 1
         fi
 
     echo -e "[ info ] 检查硬盘 正常 ."
@@ -151,28 +177,38 @@ init(){
 next(){
     last_step=$step
     if [ $step -le $max_step ]; then
-        ((step++))
-    fi
-    sed -i "2s/step=$last_step/step=$step/" $0
-    if [ "$sbs" == "yes" ]; then
-        echo -ne "[ stage ] 继续 ? [y/n] "
-        read sbs_cmd
-        if [ "$sbs_cmd" != "y" ]; then
-            echo "中止 ."
-            exit 1
+        step=$1
+        # ((step++))
+        sed -i "2s/step=$last_step/step=$step/" $0
+        if [ "$sbs" == "yes" ]; then
+            echo -ne "[ stage ] 下一步: `desc_step$step` . 继续 ? [y/n] "
+            read sbs_cmd
+            if [ "$sbs_cmd" != "y" ]; then
+                echo "中止 ."
+                end 1
+            fi
         fi
     fi
 }
 
+end(){
+    echo -e "${Red}[ W A R N I N G]${NC} 已退出 . 在关机前，你要手动执行下面这一句${Red}!!${NC}\n\n"\
+    "\t${Red}mount -o remount,ro / && mount -o remount,ro /boot${NC}\n"
+    if [ $1 -eq 0 ]; then
+        echo -e "\033[31m\033[01m\033[05m恭喜你, 圆满完成 .\033[0m"
+    fi
+    exit $1
+}
+
 # ____________________________________________________________________________
 # winux
-step1(){
+step1(){ # reentrant
     echo -ne "${Brown_Orange}[ warn ]${NC} 是否允许停止 iptalk / web 端 ? [yes/no] "
 
         read allow_stop_iptalk
         if [ "$allow_stop_iptalk" != "yes" ]; then
             echo -e "你选择了不允许($allow_stop_iptalk 而非 yes) . 中止 . 确认可以停止后再试 ."
-            exit 1
+            end 1
         fi
 
     echo -ne "[ info ] 停止 iptalk 进程 ..."
@@ -191,11 +227,14 @@ step1(){
         iptalksqlsize=`ls -l $iptalksql | awk '{print$5}'`
 
         if [ "$iptalksqlsize" == "0" ]; then
-            echo -e "\n${Red}[ erro ]${NC} 导出 iptalk 数据库 失败 . 中止 . 检查后再试 ."
-            exit 1
+            echo -ne "\n${Red}[ erro ]${NC} 导出 iptalk 数据库 失败 . 继续 ? [y/n] "
+            read _continue
+            if [ "$_continue" != "y" ]; then
+                end 1
+            else
+                echo "完毕 ."
+            fi
         fi
-    
-    echo "完毕 ."
 
     echo -ne "[ info ] 停止 mysql 服务 ..."
         
@@ -206,32 +245,31 @@ step1(){
         fi
 
     echo -e "完毕 ."
-
-    echo -e "下一步: 备份 mysql 数据 和 iptalk 资源"
 }
 
 # ____________________________________________________________________________
 
 backup(){
     if [ -d $1_bkup ]; then
-        if [ -d $1 ]; then
-            echo -e "${Brown_Orange}[ warn ]${NC} 备份数据($1_bkup)已存在: "
-            ls -l $1_bkup
-            echo -ne "\t删除 ? [yes/no] "
-            read delete
-            if [ "$delete" != "yes" ]; then
-                echo -e "你选择了保留($delete 而非 yes) ."
-            else
-                echo -ne "你选择了删除. 删除中 ..."
-                rm -rf $1_bkup
-                echo "好了 ."  
-                echo -ne "[ info ] 备份 $1 到 $1_bkup ..."
-                cp -r -p $1 $1_bkup
-                echo -e "好了 ."
-            fi
-        else
-            echo -e "[ info ] 备份数据已存在 ."
-        fi
+        echo -e "[ info ] 备份数据已存在 ."
+        # if [ -d $1 ]; then
+        #     echo -e "${Brown_Orange}[ warn ]${NC} 备份数据($1_bkup)已存在: "
+        #     ls -l $1_bkup
+        #     echo -ne "\t删除 ? [yes/no] "
+        #     read delete
+        #     if [ "$delete" != "yes" ]; then
+        #         echo -e "你选择了保留($delete 而非 yes) ."
+        #     else
+        #         echo -ne "你选择了删除. 删除中 ..."
+        #         rm -rf $1_bkup
+        #         echo "好了 ."  
+        #         echo -ne "[ info ] 备份 $1 到 $1_bkup ..."
+        #         cp -r -p $1 $1_bkup
+        #         echo -e "好了 ."
+        #     fi
+        # else
+        #     echo -e "[ info ] 备份数据已存在 ."
+        # fi
     else
         echo -ne "[ info ] 备份 $1 到 $1_bkup ..."
         cp -r -p $1 $1_bkup
@@ -248,7 +286,7 @@ check(){
         read checked
         if [ "$checked" == "no" ]; then
             echo -e "你认为备份有误($checked 而非 yes) . 中止 . 检查备份文件后再试 ."
-            exit 1
+            end 1
         fi
 
         if [ "$checked" == "yes" ]; then
@@ -263,7 +301,7 @@ check(){
     fi
 }
 # winux
-step2(){
+step2(){ # reentrant
     echo -e "[ info ] 备份 mysql 数据 ..."
 
         backup /var/lib/mysql
@@ -279,13 +317,11 @@ step2(){
     echo -e "[ info ] 备份 iptalk 资源 完毕 . \n\033[31m\033[01m\033[05m[ 重要 ! ]\033[0m 检查备份: "
         
         check /home/pi/src
-
-    echo -e "下一步: 挂载硬盘"
 }
 
 # ____________________________________________________________________________
 # winux
-step3(){
+step3(){ # reentrant
 
     mounted=`df -h | grep $selected_hd | awk '{print$6}'`
 
@@ -295,7 +331,7 @@ step3(){
         mounted=`df -h | grep $selected_hd | awk '{print$6}'`
         if [ -n "$mounted" ]; then
             echo -e "\n${Red}[ erro ]${NC} 卸载硬盘失败. 中止 . 手动卸载后重试 ."
-            exit 1
+            end 1
         else
             echo -e "好了 ."
         fi
@@ -303,7 +339,7 @@ step3(){
 
     if [ "$HDTYPE" != "ext4" ]; then
         echo -e "${Red}[ erro ]${NC} 硬盘不是 ext4 格式. 中止 . 自行格式化后重试 ."
-        exit 1
+        end 1
     fi
 
     echo -ne "[ info ] 挂载硬盘 ..."
@@ -314,24 +350,35 @@ step3(){
     mounted=`df -h | grep $selected_hd | awk '{print$6}'`
     if [ "$mounted" != "/home/pi/hd" ]; then
         echo -e "\n${Red}[ erro ]${NC} 挂载硬盘失败. 中止 . 检查后重试 ."
-        exit 1
+        end 1
     else
         echo -e "好了 ."
     fi
 
-    for dir in src iptalk_database_bkups mysql mysqld crontabs; do
+    for dir in src iptalk_database_bkups mysql mysqld crontabs tmp; do
         echo -ne "[ info ] 创建 $dir ... "
         if [ ! -d /home/pi/hd/$dir ]; then
             mkdir -p /home/pi/hd/$dir
             if [ $? -ne 0 ]; then
                 echo -e "异常 ! 中止 ."
-                exit 1
+                end 1
             fi
         fi
         echo -e "好了 ."
     done
 
-    echo -e "下一步: 移动 mysql 数据 和 iptalk 资源 到 硬盘, 并创建从 只读系统 到 移动硬盘 的符号连接"
+    echo -ne "[ info ] 修改 /home/pi/hd/mysql mysqld \n用户:用户组 为 mysql:mysql ..."
+        chown mysql:mysql -R /home/pi/hd/mysql
+        chown mysql:mysql -R /home/pi/hd/mysqld
+    echo "好了 ."
+
+    echo -ne "[ info ] 修改 /home/pi/hd/tmp 权限 为 1777 ..."
+        chmod 1777 /home/pi/hd/tmp
+    echo "好了 ."
+
+    echo -ne "[ info ] 复制 link_crontabs.sh 到 /home/pi/hd ..."
+        cp -p $base_dir/link_crontabs.sh /home/pi/hd/    
+    echo "好了 ."
 }
 
 # ____________________________________________________________________________
@@ -359,16 +406,21 @@ copy(){
     fi
 }
 # winux
-step4(){
+step4(){ # reentrant
     echo -e "[ info ] 复制 mysql 数据 ..."
         copy /var/lib/mysql_bkup /home/pi/hd/mysql
         chown -R mysql:mysql /home/pi/hd/mysql
     echo -e "[ info ] 复制 mysql 数据 完毕 ."
 
     echo -e "[ info ] 复制 iptalk 资源 ..."
-        if [ -d $base_dir/src ]; then
+        if [ -d $base_dir/src_0.5.7_sp ]; then
+            echo -e "${Red}[ info ]${NC} 帮你选择了 src_0.5.7_sp . 因为 >0.5.7 的版本才支持只读系统 ."
+            copy $base_dir/src_0.5.7_sp /home/pi/hd/src
+        elif [ -d $base_dir/src ]; then
+            echo -e "${Red}[ info ]${NC} 选择了 src . 不过 >0.5.7 的版本才支持只读系统 ."
             copy $base_dir/src /home/pi/hd/src
         else
+            echo -e "${Red}[ info ]${NC} 选择了 src_bkup . 不过 >0.5.7 的版本才支持只读系统 ."
             copy /home/pi/src_bkup /home/pi/hd/src
         fi
     echo -e "[ info ] 复制 iptalk 资源 完毕 ."
@@ -386,15 +438,13 @@ step4(){
         read checked
         if [ "$checked" != "y" ]; then
             echo -e "${Red}[ erro ]${NC} 用户检查到错误, 中止 ."
-            exit 1
+            end 1
         fi
-
-    echo -e "下一步: 配置 mysql 运行参数"
 }
 
 # ____________________________________________________________________________
 
-step5(){
+step5(){ # reentrant
     echo -ne "[ info ] 配置 mysql 运行参数 ..."
 
         mv /etc/mysql/my.cnf /etc/mysql/my.cnf.bkup$_DATE$_TIME
@@ -402,13 +452,11 @@ step5(){
         cp -p $base_dir/my.cnf.out /etc/mysql/my.cnf
 
     echo "好了 ."
-
-    echo -e "下一步: 设置 定时清理 和 定时备份 任务"
 }
 
 # ____________________________________________________________________________
-
-step6(){
+# winux
+step6(){ # reentrant
     echo -ne "[ info ] 设置定时任务 ..."
         # write out current crontab
         crontab -l > newcron
@@ -421,13 +469,11 @@ step6(){
         crontab newcron
         rm newcron
     echo "好了 ."
-
-    echo -e "下一步: 配置 iptalk 进程为启动项"
 }
 
 # ____________________________________________________________________________
 
-step7(){
+step7(){ # reentrant
 echo -ne "[ info ] 添加启动项 ..."
 cat << "EOF" > /etc/rc.local
 #!/bin/sh -e
@@ -460,14 +506,11 @@ fi
 exit 0
 EOF
 echo -e "好了 ."
-
-if [ "$precondition" == "winux" ]; then echo -e "下一步: 导入数据库"; fi
-if [ "$precondition" == "local" ]; then echo -e "下一步: 安装依赖"; fi
 }
 
 # ____________________________________________________________________________
 # winux
-step8(){
+step8(){ # reentrant
     if [ "$precondition" == "winux" ]; then
 
         iptalksql=$base_dir/iptalk_bkup_before_ro.sql
@@ -488,23 +531,19 @@ step8(){
             pip install pycrypto*
         echo -e "安装依赖 完毕 ."
     fi
-
-    echo -e "下一步: 试运行"
 }
 
 # ____________________________________________________________________________
 # winux
-step9(){
+step9(){ # reentrant
     echo -e "试运行 ..."
     bash /etc/rc.local
     echo -ne "试运行 确认成功 ? [y/n] "
     read successed
     if [ "$successed" != "y" ]; then
         echo -e "${Red}[ erro ]${NC} 用户确认试运行失败, 中止 ."
-        exit 1
+        end 1
     fi
-
-    echo -e "下一步: 修改 /boot/cmdline.txt 和 /etc/fstab"
 }
 
 # ____________________________________________________________________________
@@ -550,8 +589,6 @@ EOF
     # " >> /etc/fstab
 
     echo -e "[ info ] 修改 /etc/fstab 完毕 ."
-
-    echo -e "下一步: 移除无关软件与服务"
 }
 
 # ____________________________________________________________________________
@@ -571,8 +608,6 @@ step11(){
         apt-get autoremove --purge
 
     echo -e "[ info ] 移除无关软件与服务 完毕 ."
-
-    echo -e "下一步: 用 busybox 替代默认日志管理器"
 }
 
 # ____________________________________________________________________________
@@ -583,8 +618,6 @@ step12(){
         apt-get install -y busybox-syslogd && dpkg --purge rsyslog
 
     echo -e "[ info ] 用 busybox 替代默认日志管理器 完毕 ."
-
-    echo -e "下一步: 停用关于 交换分区 和 文件系统 的检查, 并设置为 只读"
 }
 
 # ____________________________________________________________________________
@@ -596,8 +629,6 @@ step13(){
         cat /boot/cmdline.txt
 
     echo -e "[ info ] 停用关于 交换分区 和 文件系统 的检查, 并设置为 只读 完毕 ."
-
-    echo -e "下一步: 移动部分系统文件到临时文件系统"
 }
 
 # ____________________________________________________________________________
@@ -616,8 +647,6 @@ step14(){
         chmod 1777 /tmp
 
     echo -e "[ info ] 移动部分系统文件到临时文件系统 完毕 ."
-
-    echo -e "下一步: 移动部分锁定文件到临时文件系统"
 }
 
 # ____________________________________________________________________________
@@ -641,8 +670,6 @@ step15(){
         echo -e "[ info ] daemon reloaded ."
 
     echo -e "[ info ] 对于 Raspberry PI 3, 移动部分锁定文件到临时文件系统 完毕 ."
-
-    echo -e "下一步: 修改 /etc/cron.hourly/fake-hwclock"
 }
 
 # ____________________________________________________________________________
@@ -661,8 +688,6 @@ step16(){
         sed -i "s/driftfile\ \/var\/lib\/ntp\/ntp.drift/driftfile \/var\/lib\/tmp\/ntp.drift/" /etc/ntp.conf
 
     echo -e "[ info ] 修改 /etc/ntp.conf 完毕 ."
-
-    echo -e "下一步: 移除部分启动脚本"
 }
 
 # ____________________________________________________________________________
@@ -674,8 +699,6 @@ step17(){
         insserv -r console-setup
 
     echo -e "[ info ] 移除部分启动脚本 完毕 ."
-
-    echo -e "下一步: 设置 dhcpcd 服务超时(20s)"
 }
 
 # ____________________________________________________________________________
@@ -690,8 +713,6 @@ step18(){
     echo "好了 ."
 
     systemctl daemon-reload
-
-    echo -e "下一步: 重启确认"
 
     # echo -e "[ info ] 增加动态切换 ro <=> rw 命令 ..."
 
@@ -734,10 +755,10 @@ if [ "$precondition" == "local" ]; then
 
         for k in $( seq $step $max_step )
         do
+            echo -e "----------- ----------- -----------"
+            next $k
             echo -e "\n----------- 第 $step / $max_step 步 -----------"
             step$k
-            echo -e "----------- ----------- -----------"
-            next
         done
     fi
 
@@ -752,16 +773,13 @@ if [ "$precondition" == "winux" ]; then
 
     init
 
-    for k in 1 2 3 4 8 9 10 19
+    for k in 1 2 3 4 6 8 9 10 19
     do
+        echo -e "----------- ----------- -----------"
+        next $k
         echo -e "\n----------- 第 $k / $max_step 步 -----------"
         step$k
-        echo -e "----------- ----------- -----------"
-        next
     done
-
-    mount -o remount,ro /
-    mount -o remount,ro /boot
 fi
 
-echo -e "\033[31m\033[01m\033[05m恭喜你, 圆满完成 .\033[0m"
+end 0
