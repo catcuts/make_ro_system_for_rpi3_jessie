@@ -58,5 +58,5 @@ ps aux | grep iptalk.py | awk '{print$2}' | xargs kill -9
 # # initialise trap to call trap_ctrlc function
 # # when signal 2 (SIGINT) is received
 # trap "trap_ctrlslash" 3
-echo -e "\033[31m\033[01m\033[05m[ 按 CTRL + \ 退出 ]\033[0m"
+# echo -e "\033[31m\033[01m\033[05m[ 按 CTRL + \ 退出 ]\033[0m"
 python /home/pi/hd/src/iptalk.py

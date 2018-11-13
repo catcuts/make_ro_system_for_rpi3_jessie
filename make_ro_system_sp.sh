@@ -1,9 +1,13 @@
 #!/usr/bin/bash
 step=1
 #↑ 停留在第几步, 该步之前已经执行完毕
-max_step=19
+max_step=20
 
 base_dir=`readlink -f $(dirname $0)`
+
+src=src_beta_v0.5.9_20180830_sp
+
+no_network=1
 
 # ____________________________________________________________________________
 
@@ -48,7 +52,8 @@ desc_step15(){ echo "移动部分锁定文件到临时文件系统";}
 desc_step16(){ echo "修改 /etc/cron.hourly/fake-hwclock";}
 desc_step17(){ echo "移除部分启动脚本";}
 desc_step18(){ echo "设置 dhcpcd 服务超时(20s)";}
-desc_step19(){ echo "重启确认";}
+desc_step19(){ echo "Real Time Clock 启用确认";}
+desc_step20(){ echo "重启确认";}
 
 # ____________________________________________________________________________
 
@@ -92,24 +97,26 @@ _TIME="_$TIME"
 init(){
     if [ "$precondition" == "local" ]; then
 
-        echo -ne "[ info ] 检查网络 ..."
+        if [ $no_network != 0 ]; then
 
-            ret_code=`curl -I -s --connect-timeout 5 www.baidu.com -w %{http_code} | tail -n1`
-            # ret_code maybe none so insert an x
-            if [ "$ret_code" != "200" ]; then
-                echo -e "\n${Red}[ erro ]${NC} 检查网络 异常 . 中止 ."
-                end 1
-            fi
+            echo -ne "[ info ] 检查网络 ..."
 
-        echo -e "正常 ."
+                ret_code=`curl -I -s --connect-timeout 5 www.baidu.com -w %{http_code} | tail -n1`
+                # ret_code maybe none so insert an x
+                if [ "$ret_code" != "200" ]; then
+                    echo -e "\n${Red}[ erro ]${NC} 检查网络 异常 . 中止 ."
+                    end 1
+                fi
+
+            echo -e "正常 ."
+        
+        fi
         
     # ____________________________________________________________________________
 
         echo -ne "[ info ] 确认以下步骤:\n \
     1. SD 卡扩容\n \
-    2. bash /home/pi/src/stop.sh\n \
-    3. apt-get update\n \
-    4. bash /home/pi/src/stop.sh\n \
+    2. bash reboot.sh\n \
         已按顺序完成 ? [yes/no] "
         read done_prepare
         if [ "$done_prepare" != "yes" ]; then
@@ -413,9 +420,9 @@ step4(){ # reentrant
     echo -e "[ info ] 复制 mysql 数据 完毕 ."
 
     echo -e "[ info ] 复制 iptalk 资源 ..."
-        if [ -d $base_dir/src_0.5.7_sp ]; then
-            echo -e "${Red}[ info ]${NC} 帮你选择了 src_0.5.7_sp . 因为 >0.5.7 的版本才支持只读系统 ."
-            copy $base_dir/src_0.5.7_sp /home/pi/hd/src
+        if [ -d $base_dir/$src ]; then
+            echo -e "${Red}[ info ]${NC} 帮你选择了 $src . 因为 $src 及以上才支持只读系统 ."
+            copy $base_dir/$src /home/pi/hd/src
         elif [ -d $base_dir/src ]; then
             echo -e "${Red}[ info ]${NC} 选择了 src . 不过 >0.5.7 的版本才支持只读系统 ."
             copy $base_dir/src /home/pi/hd/src
@@ -427,6 +434,7 @@ step4(){ # reentrant
 
     echo -e "[ info ] 创建符号链接 ..."
         ln -s /home/pi/hd/mysql /var/lib/mysql
+        rm -rf /home/pi/src
         ln -s /home/pi/hd/src /home/pi/src
         mv /var/spool/cron/crontabs /var/spool/cron/crontabs_bkup
         ln -s /home/pi/hd/crontabs /var/spool/cron/crontabs
@@ -496,11 +504,23 @@ if [ "$_IP" ]; then
 fi
 
 {  # your 'try' block
-   bash /home/pi/check_hd.sh && \
-   bash /home/pi/hd/link_crontabs.sh && \
-   bash /home/pi/start_iptalk_on_rpi3.sh
+    echo "Asynchronizing time ..." && \
+        mount -o remount,rw / && \
+        #echo "ds1307 0x68" > /sys/class/i2c-adapter/i2c-1/new_device && \
+        #sleep 1  # wait for several time for /dev/rtc to be created && \
+        hwclock -s && \
+        mount -o remount,ro / && \
+    echo "Time asynchronized ."
 } || {  # your 'catch' block
-    echo 'E R R O R'
+    echo 'E R R O R - A S Y N C - T I M E'
+}
+
+{  # your 'try' block
+    bash /home/pi/check_hd.sh && \
+    bash /home/pi/hd/link_crontabs.sh && \
+    bash /home/pi/start_iptalk_on_rpi3.sh &
+} || {  # your 'catch' block
+    echo 'E R R O R - R U N N I N G - I P T A L K'
 }
 
 exit 0
@@ -513,6 +533,12 @@ echo -e "好了 ."
 step8(){ # reentrant
     if [ "$precondition" == "winux" ]; then
 
+        bash start_iptalk_on_rpi3.sh only-mysql
+
+        echo -e "[ info ] 删除原数据库 ..."
+            mysql -uroot -proot -e 'drop database iptalk'
+        echo -e "[ info ] 删除原数据库 完毕 ."
+
         iptalksql=$base_dir/iptalk_bkup_before_ro.sql
 
         iptalksqlsize=`ls -l $iptalksql | awk '{print$5}'`
@@ -520,10 +546,8 @@ step8(){ # reentrant
         if [ "$iptalksqlsize" == "0" -o "$iptalksqlsize" == "" ]; then
             echo -e "${Brown_Orange}[ warn ]${NC} 没有原数据库可以导入 ."
         else
-            bash start_iptalk_on_rpi3.sh only-mysql
             echo -e "[ info ] 导入原数据库 ..."
-            mysql -uroot -proot -e 'drop database iptalk'
-            mysql -uroot -proot iptalk < $iptalksql
+                mysql -uroot -proot iptalk < $iptalksql
             echo -e "[ info ] 导入原数据库 完毕 ."
         fi
     else    
@@ -596,16 +620,20 @@ EOF
 step11(){
     echo -e "[ info ] 移除无关软件与服务 ..."
 
-        apt-get remove --purge -y wolfram-engine \
-            triggerhappy \
-            anacron \
-            logrotate \
-            dphys-swapfile \
-            xserver-common \
-            lightdm && \
+        if [ $no_network != 0 ]; then
 
-        insserv -r x11-common && \
-        apt-get autoremove --purge
+            apt-get remove --purge -y wolfram-engine \
+                triggerhappy \
+                anacron \
+                logrotate \
+                dphys-swapfile \
+                xserver-common \
+                lightdm && \
+
+            insserv -r x11-common && \
+            apt-get autoremove --purge
+
+        fi
 
     echo -e "[ info ] 移除无关软件与服务 完毕 ."
 }
@@ -615,7 +643,7 @@ step11(){
 step12(){
     echo -e "[ info ] 用 busybox 替代默认日志管理器 ..."
 
-        apt-get install -y busybox-syslogd && dpkg --purge rsyslog
+        # apt-get install -y busybox-syslogd && dpkg --purge rsyslog
 
     echo -e "[ info ] 用 busybox 替代默认日志管理器 完毕 ."
 }
@@ -732,10 +760,27 @@ step18(){
 # ____________________________________________________________________________
 # winux
 step19(){
+    echo -ne "[ stage ] 是否启用 RTC ? [y/n] "
+
+    read cmd
+    if [ "$cmd" == "y" ]; then
+        if [ "`tail -1 /boot/config.txt | grep ^dtoverlay`" == "" ]; then
+            echo -e "\ndtoverlay=i2c-rtc,ds1307" >> /boot/config.txt
+        fi
+        echo -e "RTC 已启用为: dtoverlay=i2c-rtc,ds1307 ."
+    else
+        echo -e "你选择了不启用($cmd 而非 y) 跳过 ."
+    fi
+}
+
+# ____________________________________________________________________________
+# winux
+step20(){
     echo -ne "[ stage ] 重启 ? [yes/no] "
 
     read cmd
     if [ "$cmd" == "yes" ]; then
+        ps aux | grep "iptalk" | awk '{print$2}' | xargs kill -9
         systemctl reboot
     else
         echo -e "你选择了不重启($cmd 而非 yes) 稍候使用 systemctl reboot 来重启 ."
@@ -773,7 +818,7 @@ if [ "$precondition" == "winux" ]; then
 
     init
 
-    for k in 1 2 3 4 6 8 9 10 19
+    for k in 1 2 3 4 6 7 8 9 10 19 20
     do
         echo -e "----------- ----------- -----------"
         next $k
