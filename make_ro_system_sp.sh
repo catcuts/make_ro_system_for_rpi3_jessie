@@ -5,7 +5,7 @@ max_step=20
 
 base_dir=`readlink -f $(dirname $0)`
 
-src=src_beta_v0.5.9_20180830_sp
+src=src_v0.5.10.1113
 
 no_network=1
 
@@ -420,14 +420,30 @@ step4(){ # reentrant
     echo -e "[ info ] 复制 mysql 数据 完毕 ."
 
     echo -e "[ info ] 复制 iptalk 资源 ..."
+
+        echo "[ info ] 选择 iptalk 资源版本："
+        select version in $src（美一版） "$src"_neutral（中性版）;
+        do
+            break
+        done
+
+        echo "[ info ] 你选择了：$version ."
+
+        if [ version == "$src（美一版）" ]; then
+            src=$src
+        elif [ version == "'$src'_neutral（中性版）" ]; then
+            src="$src"_neutral
+        fi
+
         if [ -d $base_dir/$src ]; then
-            echo -e "${Red}[ info ]${NC} 帮你选择了 $src . 因为 $src 及以上才支持只读系统 ."
             copy $base_dir/$src /home/pi/hd/src
         elif [ -d $base_dir/src ]; then
-            echo -e "${Red}[ info ]${NC} 选择了 src . 不过 >0.5.7 的版本才支持只读系统 ."
+            echo -e "${Red}[ error ]${NC} 没找到 $version ."
+            echo -e "${Red}[ info ]${NC} 选择了 src . 不过要注意 >0.5.7 的版本才支持只读系统 ."
             copy $base_dir/src /home/pi/hd/src
         else
-            echo -e "${Red}[ info ]${NC} 选择了 src_bkup . 不过 >0.5.7 的版本才支持只读系统 ."
+            echo -e "${Red}[ error ]${NC} 没找到 $version 和 src ."
+            echo -e "${Red}[ info ]${NC} 选择了 src_bkup . 不过要注意 >0.5.7 的版本才支持只读系统 ."
             copy /home/pi/src_bkup /home/pi/hd/src
         fi
     echo -e "[ info ] 复制 iptalk 资源 完毕 ."
@@ -764,7 +780,9 @@ step19(){
 
     read cmd
     if [ "$cmd" == "y" ]; then
-        if [ "`tail -1 /boot/config.txt | grep ^dtoverlay`" == "" ]; then
+        if grep -Fxq "dtoverlay=i2c-rtc,ds1307" /boot/config.txt; then
+            echo -n ""
+        else
             echo -e "\ndtoverlay=i2c-rtc,ds1307" >> /boot/config.txt
         fi
         echo -e "RTC 已启用为: dtoverlay=i2c-rtc,ds1307 ."
