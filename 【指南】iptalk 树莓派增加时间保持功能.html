@@ -13116,71 +13116,95 @@ div#notebook {
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h4 id="1.-&#20934;&#22791;">1. &#20934;&#22791;<a class="anchor-link" href="#1.-&#20934;&#22791;">&#182;</a></h4><p>u 盘格式化为 ext4 或 vfat 格式后，</p>
-<p>在 u 盘中放入两个文件：</p>
-<ol>
-<li><code>make_ro_system_for_rpi3_jessie</code><br>
-（注：从 <a href="http://192.168.38.165:8080/index.php/apps/files/?dir=/%E4%BA%A7%E5%93%81%E5%8F%91%E5%B8%83/UIPTalk%E5%AF%B9%E8%AE%B2%E7%B3%BB%E7%BB%9F/%E6%AD%A3%E5%BC%8F%E7%89%88%E6%9C%AC/%E6%9C%8D%E5%8A%A1%E5%99%A8%E8%BD%AF%E4%BB%B6/web%E6%9C%8D%E5%8A%A1%E5%99%A8%EF%BC%88%E6%A0%91%E8%8E%93%E6%B4%BETB-8000\">owncloud</a>/%E8%84%9A%E6%9C%AC&amp;fileid=39186) 下载下来后解压成文件夹）</li>
+<h2 id="&#12304;&#25351;&#21335;&#12305;iptalk-&#26641;&#33683;&#27966;&#22686;&#21152;&#26102;&#38388;&#20445;&#25345;&#21151;&#33021;">&#12304;&#25351;&#21335;&#12305;iptalk &#26641;&#33683;&#27966;&#22686;&#21152;&#26102;&#38388;&#20445;&#25345;&#21151;&#33021;<a class="anchor-link" href="#&#12304;&#25351;&#21335;&#12305;iptalk-&#26641;&#33683;&#27966;&#22686;&#21152;&#26102;&#38388;&#20445;&#25345;&#21151;&#33021;">&#182;</a></h2><p><strong><span style='color: #dd4b39;'>注：</span></strong></p>
+<ul>
+<li>本文建立在镜像已经写入 SD 卡的基础上！</li>
+</ul>
+<hr>
+<hr>
+<h3 id="1.-&#20934;&#22791;"><span style="color: #dd4b39;">1. &#20934;&#22791;</span><a class="anchor-link" href="#1.-&#20934;&#22791;">&#182;</a></h3><ol>
+<li>准备 U 盘 1 个，至少有一个分区为 ext4 或 vfat 格式；
+<br><br></li>
+<li><p>在 U 盘的 ext4 或 vfat 格式 的 分区 的 <strong>根目录</strong> 中，新建一个文件夹，命名为 <code>RTC</code>，在其中放入 2 个文件：</p>
+<ul>
+<li><code>make_ro_system_for_rpi3_jessie</code>（注：从 <a href="http://192.168.38.165:8080/index.php/apps/files/?dir=/%E4%BA%A7%E5%93%81%E5%8F%91%E5%B8%83/UIPTalk%E5%AF%B9%E8%AE%B2%E7%B3%BB%E7%BB%9F/%E6%AD%A3%E5%BC%8F%E7%89%88%E6%9C%AC/%E6%9C%8D%E5%8A%A1%E5%99%A8%E8%BD%AF%E4%BB%B6/web%E6%9C%8D%E5%8A%A1%E5%99%A8%EF%BC%88%E6%A0%91%E8%8E%93%E6%B4%BETB-8000\">owncloud</a>/%E8%84%9A%E6%9C%AC&amp;fileid=39186) 下载下来后解压成文件夹）
+<br><br></li>
+<li><code>inject_new_maker.sh</code> (注：从 <a href="http://192.168.38.165:8080/index.php/apps/files/?dir=/%E4%BA%A7%E5%93%81%E5%8F%91%E5%B8%83/UIPTalk%E5%AF%B9%E8%AE%B2%E7%B3%BB%E7%BB%9F/%E6%AD%A3%E5%BC%8F%E7%89%88%E6%9C%AC/%E6%9C%8D%E5%8A%A1%E5%99%A8%E8%BD%AF%E4%BB%B6/web%E6%9C%8D%E5%8A%A1%E5%99%A8%EF%BC%88%E6%A0%91%E8%8E%93%E6%B4%BETB-8000\">owncloud</a>/%E8%84%9A%E6%9C%AC&amp;fileid=39186) 下载)
+<br><br>    </li>
+<li><p>完成后文件目录结构如下：</p>
+<p>U 盘<br>
+　　|—— RTC<br>
+　　　　　|—— make_ro_system_for_rpi3_jessie<br>
+　　　　　|　　　|—— ...很多文件<br>
+　　　　　|<br>
+　　　　　|—— inject_new_maker.sh<br>
+<br><br></p>
+</li>
+</ul>
+</li>
+<li>领取一台 TB-8000S
+<br><br></li>
+<li>安装 RTC 模块如下所示</li>
 </ol>
-<ol>
-<li><code>inject_new_maker.sh</code><br>
-(注：从 <a href="http://192.168.38.165:8080/index.php/apps/files/?dir=/%E4%BA%A7%E5%93%81%E5%8F%91%E5%B8%83/UIPTalk%E5%AF%B9%E8%AE%B2%E7%B3%BB%E7%BB%9F/%E6%AD%A3%E5%BC%8F%E7%89%88%E6%9C%AC/%E6%9C%8D%E5%8A%A1%E5%99%A8%E8%BD%AF%E4%BB%B6/web%E6%9C%8D%E5%8A%A1%E5%99%A8%EF%BC%88%E6%A0%91%E8%8E%93%E6%B4%BETB-8000\">owncloud</a>/%E8%84%9A%E6%9C%AC&amp;fileid=39186) 下载)</li>
+<p><strong>—USB—USB—网口—顶部|</strong><br>
+|o o　　　　　　　　　|<br>
+|o o　　　　　　　　　|<br>
+|o o　　　　　　　　　|<br>
+|o o　　　　　　　　　|<br>
+|o o　　　　　　　　　|<br>
+|<strong><span style='color: #dd4b39;'>●</span></strong> &lt;- 左列 从 <strong>顶部</strong> 往下数第 6 个引脚 对接 模块 <span style='color: #dd4b39;'>GND</span><br>
+|o o　　　　　　　　　|<br>
+中间部分略　　　　　　|<br>
+中间部分略　　　　　　|<br>
+中间部分略　　　　　　|<br>
+|o <strong><span style='color: #dd4b39;'>●</span></strong> &lt;- 右列 从 <strong>底部</strong> 往上数第 3 个引脚 对接 模块 <span style='color: #dd4b39;'>SCL</span><br>
+|o <strong><span style='color: #dd4b39;'>●</span></strong> &lt;- 右列 从 <strong>底部</strong> 往上数第 2 个引脚 对接 模块 <span style='color: #dd4b39;'>SDA</span><br>
+|<strong><span style='color: #dd4b39;'>●</span></strong> &lt;- 左列 从 <strong>底部</strong> 往上数第 1 个引脚 对接 模块 <span style='color: #dd4b39;'>5V</span><br>
+<strong>—————————底部|</strong></p>
+<hr>
+<hr>
+<h3 id="2.-&#26356;&#26032;&#23433;&#35013;&#21253;"><span style="color: #dd4b39;">2. &#26356;&#26032;&#23433;&#35013;&#21253;</span><a class="anchor-link" href="#2.-&#26356;&#26032;&#23433;&#35013;&#21253;">&#182;</a></h3><ol>
+<li>插入 U 盘，然后 putty 进入树莓派系统
+<br><br></li>
+<li>把根目录重载为可写：<code>mount -o remount,rw /</code>
+<br><br></li>
+<li>创建 U 盘挂载点：<code>if [ ! -d /home/pi/usb ]; then mkdir -p /home/pi/usb; fi</code>
+<br><br></li>
+<li><p>找到 U 盘设备名称：<code>fdisk -l | grep ^Disk</code></p>
+<p>注：</p>
+<ul>
+<li>有可能是 <code>/dev/sda</code> 也有可能是 <code>/dev/sdb</code> 注意看</li>
+<li>以下以 <code>/dev/sda</code> 为例
+<br><br></li>
+</ul>
+</li>
+<li>挂载所选 U 盘：<code>mount /dev/sda /home/pi/usb</code>
+<br><br></li>
+<li>进入 U 盘：<code>cd /home/pi/usb</code>
+<br><br></li>
+<li>运行：<code>bash inject_new_maker.sh</code>
+<br><br></li>
+<li>退出 U 盘：<code>cd ~</code>
+<br><br></li>
+<li>弹出 U 盘：<code>umount /home/pi/usb</code>
+<br><br></li>
+<li>把根目录重载为只读：<code>mount -o remount,ro /</code></li>
 </ol>
-<ol>
-<li>领取一台 TB-8000S</li>
-</ol>
-<ol>
-<li>安装 RTC 模块</li>
-</ol>
-<p>—USB—USB—网口——|<br>
-|o o　　　　　　　　　|<br>
-|o o　　　　　　　　　|<br>
-|o o　　　　　　　　　|<br>
-|o o　　　　　　　　　|<br>
-|o o　　　　　　　　　|<br>
-|<em> &lt;- 左列 从上往下数第 6 个引脚 对接 模块 GND<br>
-|o o　　　　　　　　　|<br>
-......　　　　　　　　　|<br>
-......　　　　　　　　　|<br>
-......　　　　　　　　　|<br>
-|o </em> &lt;- 右列 从下往上数第 3 个引脚 对接 模块 SDA<br>
-|o <em> &lt;- 右列 从下往上数第 2 个引脚 对接 模块 SCL<br>
-|</em> &lt;- 左列 从下往上数第 1 个引脚 对接 模块 5V<br>
-———————————|</p>
-<h4 id="2.-&#26356;&#26032;&#23433;&#35013;&#21253;&#65306;">2. &#26356;&#26032;&#23433;&#35013;&#21253;&#65306;<a class="anchor-link" href="#2.-&#26356;&#26032;&#23433;&#35013;&#21253;&#65306;">&#182;</a></h4><div class="highlight"><pre><span></span><span class="c1"># 插入 u 盘（ext4 或 vfat 格式）</span>
-<span class="c1"># 然后 putty 进入</span>
-<span class="c1"># 挂载 u 盘</span>
-
-mount -o remount,rw /
-mkdir /home/pi/usb
-mount /dev/sdb /home/pi/usb
-
-<span class="c1"># 进入 u 盘</span>
-
-<span class="nb">cd</span> /home/pi/usb
-
-<span class="c1"># 运行 u 盘上文件</span>
-
-bash inject_new_maker.sh
-
-<span class="c1"># 最后</span>
-mount -o remount,ro /
+<hr>
+<hr>
+<h3 id="3.-(&#37325;&#26032;)&#37096;&#32626;"><span style="color: #dd4b39;">3. (&#37325;&#26032;)&#37096;&#32626;</span><a class="anchor-link" href="#3.-(&#37325;&#26032;)&#37096;&#32626;">&#182;</a></h3><div class="highlight"><pre><span></span>bash /home/pi/make_ro_system_for_rpi3_jessie/make_ro_system_sp.sh windows
 </pre></div>
-<h4 id="3.-&#37325;&#26032;&#37096;&#32626;&#65306;">3. &#37325;&#26032;&#37096;&#32626;&#65306;<a class="anchor-link" href="#3.-&#37325;&#26032;&#37096;&#32626;&#65306;">&#182;</a></h4><div class="highlight"><pre><span></span>bash /home/pi/make_ro_system_for_rpi3_jessie/make_ro_system_sp.sh windows
-</pre></div>
-<h4 id="4.-&#26368;&#23567;&#27979;&#35797;&#27969;&#31243;">4. &#26368;&#23567;&#27979;&#35797;&#27969;&#31243;<a class="anchor-link" href="#4.-&#26368;&#23567;&#27979;&#35797;&#27969;&#31243;">&#182;</a></h4><ol>
-<li>ssh 进入树莓派，修改系统时间为错误的时间：<code>sudo date --s="2018-07-03 11:18:00"</code></li>
-</ol>
-<ol>
-<li>web 管理界面 &gt; 系统配置 &gt; 系统设置 &gt; (拉到底) &gt; 校正时间</li>
-</ol>
-<ol>
-<li>ssh 进入树莓派，执行 <code>date</code> 检查系统时间与 web 管理界面所在电脑的时间一致</li>
-</ol>
-<ol>
-<li>执行 <code>if [ "</code>mount | grep ^/dev/mm | grep rw<code>" == "" ]; then echo ok; fi</code> 输出 <code>ok</code></li>
-</ol>
-<ol>
+<hr>
+<hr>
+<h3 id="4.-&#26368;&#23567;&#27979;&#35797;&#27969;&#31243;"><span style="color: #dd4b39;">4. &#26368;&#23567;&#27979;&#35797;&#27969;&#31243;</span><a class="anchor-link" href="#4.-&#26368;&#23567;&#27979;&#35797;&#27969;&#31243;">&#182;</a></h3><ol>
+<li>ssh 进入树莓派，修改系统时间为错误的时间：<code>sudo date --s="2018-07-03 11:18:00"</code>
+<br><br></li>
+<li>web 管理界面 &gt; 系统配置 &gt; 系统设置 &gt; (拉到底) &gt; 校正时间
+<br><br></li>
+<li>ssh 进入树莓派，执行 <code>date</code> 检查系统时间与 web 管理界面所在电脑的时间一致
+<br><br></li>
+<li>执行 <code>if [ "`mount | grep ^/dev/mm | grep rw`" == "" ]; then echo ok; fi</code> 输出 <code>ok</code>
+<br><br></li>
 <li>断电一段时间后，ssh 进入树莓派，执行 <code>date</code> 检查系统时间与 web 管理界面所在电脑时间一致</li>
 </ol>
 
