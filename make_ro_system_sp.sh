@@ -5,9 +5,11 @@ max_step=20
 
 base_dir=`readlink -f $(dirname $0)`
 
-src=src_v0.5.10.1113
+src=src_v0.5.10.1119
 
 no_network=1
+
+retain_mysql_data=0
 
 # ____________________________________________________________________________
 
@@ -411,11 +413,15 @@ copy(){
         cp -r -p $1/* $2/
         echo "好了"
     fi
+
+    if [ "$3" == "mysql" ]; then
+        eval "retain_$3_data=1"
+    fi
 }
 # winux
 step4(){ # reentrant
     echo -e "[ info ] 复制 mysql 数据 ..."
-        copy /var/lib/mysql_bkup /home/pi/hd/mysql
+        copy /var/lib/mysql_bkup /home/pi/hd/mysql mysql
         chown -R mysql:mysql /home/pi/hd/mysql
     echo -e "[ info ] 复制 mysql 数据 完毕 ."
 
@@ -548,23 +554,26 @@ echo -e "好了 ."
 # winux
 step8(){ # reentrant
     if [ "$precondition" == "winux" ]; then
+        if [ "$retain_mysql_data" == 0 ]; then
+            bash start_iptalk_on_rpi3.sh only-mysql
 
-        bash start_iptalk_on_rpi3.sh only-mysql
+            echo -e "[ info ] 删除原数据库 ..."
+                mysql -uroot -proot -e 'drop database iptalk'
+            echo -e "[ info ] 删除原数据库 完毕 ."
 
-        echo -e "[ info ] 删除原数据库 ..."
-            mysql -uroot -proot -e 'drop database iptalk'
-        echo -e "[ info ] 删除原数据库 完毕 ."
+            iptalksql=$base_dir/iptalk_bkup_before_ro.sql
 
-        iptalksql=$base_dir/iptalk_bkup_before_ro.sql
+            iptalksqlsize=`ls -l $iptalksql | awk '{print$5}'`
 
-        iptalksqlsize=`ls -l $iptalksql | awk '{print$5}'`
-
-        if [ "$iptalksqlsize" == "0" -o "$iptalksqlsize" == "" ]; then
-            echo -e "${Brown_Orange}[ warn ]${NC} 没有原数据库可以导入 ."
-        else
-            echo -e "[ info ] 导入原数据库 ..."
-                mysql -uroot -proot iptalk < $iptalksql
-            echo -e "[ info ] 导入原数据库 完毕 ."
+            if [ "$iptalksqlsize" == "0" -o "$iptalksqlsize" == "" ]; then
+                echo -e "${Brown_Orange}[ warn ]${NC} 没有原数据库可以导入 ."
+            else
+                echo -e "[ info ] 导入原数据库 ..."
+                    mysql -uroot -proot iptalk < $iptalksql
+                echo -e "[ info ] 导入原数据库 完毕 ."
+            fi
+        else 
+            echo -e "已选择保留数据库 ."
         fi
     else    
         echo -e "安装依赖 ..."
@@ -780,14 +789,71 @@ step19(){
 
     read cmd
     if [ "$cmd" == "y" ]; then
-        if grep -Fxq "dtoverlay=i2c-rtc,ds1307" /boot/config.txt; then
-            echo -n ""
-        else
-            echo -e "\ndtoverlay=i2c-rtc,ds1307" >> /boot/config.txt
+        
+        echo -ne "[ info ] 修改 /boot/config.txt ..."
+            if grep -Fxq "dtoverlay=i2c-rtc,ds1307" /boot/config.txt; then
+                echo -n ""
+            else
+                echo -e "\ndtoverlay=i2c-rtc,ds1307" >> /boot/config.txt
+            fi
+        echo -e "好了 ."
+        echo -e "[ info ] RTC 已启用为: dtoverlay=i2c-rtc,ds1307 ."
+
+        if [ "`which fake-hwclock`" != "" ]; then
+
+            echo -e "[ info ] 移除 fwclock ..."
+                sudo apt-get -y remove fake-hwclock
+                sudo update-rc.d -f fake-hwclock remove
+                sudo systemctl disable fake-hwclock
+            echo -e "[ info ] 移除 fwclock 完毕 ."
+        
         fi
-        echo -e "RTC 已启用为: dtoverlay=i2c-rtc,ds1307 ."
+
+        echo -ne "[ info ] 修改 /lib/udev/hwclock-set ..."
+
+cat << "EOF" > /lib/udev/hwclock-set
+#!/bin/sh
+# Reset the System Clock to UTC if the hardware clock from which it
+# was copied by the kernel was in localtime.
+
+dev=$1
+
+#if [ -e /run/systemd/system ] ; then
+#    exit 0
+#fi
+
+if [ -e /run/udev/hwclock-set ]; then
+    exit 0
+fi
+
+if [ -f /etc/default/rcS ] ; then
+    . /etc/default/rcS
+fi
+
+# These defaults are user-overridable in /etc/default/hwclock
+BADYEAR=no
+HWCLOCKACCESS=yes
+HWCLOCKPARS=
+HCTOSYS_DEVICE=rtc0
+if [ -f /etc/default/hwclock ] ; then
+    . /etc/default/hwclock
+fi
+
+if [ yes = "$BADYEAR" ] ; then
+    /sbin/hwclock --rtc=$dev --systz --badyear
+    /sbin/hwclock --rtc=$dev --hctosys --badyear
+else
+    /sbin/hwclock --rtc=$dev --systz
+    /sbin/hwclock --rtc=$dev --hctosys
+fi
+
+# Note 'touch' may not be available in initramfs
+> /run/udev/hwclock-set
+EOF
+
+        echo -e "好了 ."
     else
-        echo -e "你选择了不启用($cmd 而非 y) 跳过 ."
+        echo -e "[ info ] 你选择了不启用($cmd 而非 y) 跳过 ."
     fi
 }
 

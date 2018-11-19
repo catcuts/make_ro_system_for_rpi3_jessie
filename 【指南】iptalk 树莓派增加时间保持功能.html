@@ -13178,6 +13178,14 @@ div#notebook {
 <br><br></li>
 </ul>
 </li>
+<li><p>找到 U 盘分区：<code>fdisk -l</code></p>
+<p>注：</p>
+<ul>
+<li>有可能是 <code>/dev/sda</code> 或 <code>/dev/sda1</code> 也有可能是 <code>/dev/sda2</code> 注意看</li>
+<li>以下以 <code>/dev/sda</code> 为例
+<br><br></li>
+</ul>
+</li>
 <li>挂载所选 U 盘：<code>mount /dev/sda /home/pi/usb</code>
 <br><br></li>
 <li>进入 U 盘：<code>cd /home/pi/usb</code>
@@ -13192,20 +13200,45 @@ div#notebook {
 </ol>
 <hr>
 <hr>
-<h3 id="3.-(&#37325;&#26032;)&#37096;&#32626;"><span style="color: #dd4b39;">3. (&#37325;&#26032;)&#37096;&#32626;</span><a class="anchor-link" href="#3.-(&#37325;&#26032;)&#37096;&#32626;">&#182;</a></h3><div class="highlight"><pre><span></span>bash /home/pi/make_ro_system_for_rpi3_jessie/make_ro_system_sp.sh windows
+<h3 id="3.-&#37197;&#32622;&#31995;&#32479;"><span style="color: #dd4b39;">3. &#37197;&#32622;&#31995;&#32479;</span><a class="anchor-link" href="#3.-&#37197;&#32622;&#31995;&#32479;">&#182;</a></h3><ol>
+<li>执行 <code>mount -o remount,rw /</code>
+<br><br></li>
+<li>执行 <code>mount -o remount,rw /boot</code>
+<br><br></li>
+<li>执行 <code>raspi-config</code>
+<br><br></li>
+<li>选择 <code>5 Interfacing Options</code> 回车
+<br><br></li>
+<li>选择 <code>P5 I2C</code> 回车
+<br><br></li>
+<li>选择 <code>Yes</code>
+<br><br></li>
+<li>选择 <code>OK</code>
+<br><br></li>
+<li>选择 <code>finish</code></li>
+</ol>
+<hr>
+<hr>
+<h3 id="4.-(&#37325;&#26032;)&#37096;&#32626;"><span style="color: #dd4b39;">4. (&#37325;&#26032;)&#37096;&#32626;</span><a class="anchor-link" href="#4.-(&#37325;&#26032;)&#37096;&#32626;">&#182;</a></h3><div class="highlight"><pre><span></span>bash /home/pi/make_ro_system_for_rpi3_jessie/make_ro_system_sp.sh windows
 </pre></div>
 <hr>
 <hr>
-<h3 id="4.-&#26368;&#23567;&#27979;&#35797;&#27969;&#31243;"><span style="color: #dd4b39;">4. &#26368;&#23567;&#27979;&#35797;&#27969;&#31243;</span><a class="anchor-link" href="#4.-&#26368;&#23567;&#27979;&#35797;&#27969;&#31243;">&#182;</a></h3><ol>
+<h3 id="5.-&#26368;&#23567;&#27979;&#35797;&#27969;&#31243;"><span style="color: #dd4b39;">5. &#26368;&#23567;&#27979;&#35797;&#27969;&#31243;</span><a class="anchor-link" href="#5.-&#26368;&#23567;&#27979;&#35797;&#27969;&#31243;">&#182;</a></h3><ol>
 <li>ssh 进入树莓派，修改系统时间为错误的时间：<code>sudo date --s="2018-07-03 11:18:00"</code>
 <br><br></li>
 <li>web 管理界面 &gt; 系统配置 &gt; 系统设置 &gt; (拉到底) &gt; 校正时间
 <br><br></li>
-<li>ssh 进入树莓派，执行 <code>date</code> 检查系统时间与 web 管理界面所在电脑的时间一致
+<li>ssh 进入树莓派，执行 <code>date</code> 检查系统时间与 web 管理界面所在电脑的时间一致<ul>
+<li>如果不一致，执行 <code>hwclock -r -D</code> 查看原因
 <br><br></li>
+</ul>
+</li>
 <li>执行 <code>if [ "`mount | grep ^/dev/mm | grep rw`" == "" ]; then echo ok; fi</code> 输出 <code>ok</code>
 <br><br></li>
-<li>断电一段时间后，ssh 进入树莓派，执行 <code>date</code> 检查系统时间与 web 管理界面所在电脑时间一致</li>
+<li>断电一段时间后，ssh 进入树莓派，执行 <code>date</code> 检查系统时间与 web 管理界面所在电脑时间一致<ul>
+<li>如果不一致，执行 <code>hwclock -r -D</code> 查看原因</li>
+</ul>
+</li>
 </ol>
 
 </div>
