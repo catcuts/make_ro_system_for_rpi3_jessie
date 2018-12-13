@@ -1,11 +1,11 @@
 #!/usr/bin/bash
-step=1
+step=4
 #↑ 停留在第几步, 该步之前已经执行完毕
 max_step=20
 
 base_dir=`readlink -f $(dirname $0)`
 
-src=src_v0.5.10.1119
+srcs=`ls -l | grep "^d.*src" | awk '{print $9}'`
 
 no_network=1
 
@@ -428,18 +428,26 @@ step4(){ # reentrant
     echo -e "[ info ] 复制 iptalk 资源 ..."
 
         echo "[ info ] 选择 iptalk 资源版本："
-        select version in $src（美一版） "$src"_neutral（中性版）;
+        select src in $srcs;
         do
             break
         done
 
-        echo "[ info ] 你选择了：$version ."
+        echo "[ info ] 你选择了：$src ."
 
-        if [ version == "$src（美一版）" ]; then
-            src=$src
-        elif [ version == "'$src'_neutral（中性版）" ]; then
-            src="$src"_neutral
-        fi
+        # echo "[ info ] 选择 iptalk 资源版本："
+        # select version in $src"（美一版）" $src"_neutral（中性版）";
+        # do
+        #     break
+        # done
+
+        # echo "[ info ] 你选择了：$version ."
+
+        # if [ $version == $src"（美一版）" ]; then
+        #     src=$src
+        # elif [ $version == $src"_neutral（中性版）" ]; then
+        #     src="$src"_neutral
+        # fi
 
         if [ -d $base_dir/$src ]; then
             copy $base_dir/$src /home/pi/hd/src
@@ -525,17 +533,17 @@ if [ "$_IP" ]; then
   printf "My IP address is %s\n" "$_IP"
 fi
 
+mount -o remount,rw /
+
 {  # your 'try' block
     echo "Asynchronizing time ..." && \
-        mount -o remount,rw / && \
-        #echo "ds1307 0x68" > /sys/class/i2c-adapter/i2c-1/new_device && \
-        #sleep 1  # wait for several time for /dev/rtc to be created && \
         hwclock -s && \
-        mount -o remount,ro / && \
     echo "Time asynchronized ."
 } || {  # your 'catch' block
     echo 'E R R O R - A S Y N C - T I M E'
 }
+
+mount -o remount,ro /
 
 {  # your 'try' block
     bash /home/pi/check_hd.sh && \

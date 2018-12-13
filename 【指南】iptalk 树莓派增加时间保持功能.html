@@ -2,7 +2,7 @@
 <html>
 <head><meta charset="utf-8" />
 
-<title>【指南】iptalk 树莓派增加时间保持功能</title>
+<title>【指南】iptalk 树莓派增加时间保持功能-v2</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
@@ -13123,28 +13123,12 @@ div#notebook {
 <hr>
 <hr>
 <h3 id="1.-&#20934;&#22791;"><span style="color: #dd4b39;">1. &#20934;&#22791;</span><a class="anchor-link" href="#1.-&#20934;&#22791;">&#182;</a></h3><ol>
-<li>准备 U 盘 1 个，至少有一个分区为 ext4 或 vfat 格式；
+<li>从 <a href="http://192.168.38.165:8080/index.php/apps/files/?dir=/%E4%BA%A7%E5%93%81%E5%8F%91%E5%B8%83/UIPTalk%E5%AF%B9%E8%AE%B2%E7%B3%BB%E7%BB%9F/%E6%AD%A3%E5%BC%8F%E7%89%88%E6%9C%AC/%E6%9C%8D%E5%8A%A1%E5%99%A8%E8%BD%AF%E4%BB%B6/web%E6%9C%8D%E5%8A%A1%E5%99%A8%EF%BC%88%E6%A0%91%E8%8E%93%E6%B4%BETB-8000\">owncloud</a>/%E8%84%9A%E6%9C%AC&amp;fileid=39186) 下载 <code>make_ro_system_for_rpi3_jessie.zip</code> 到本地
 <br><br></li>
-<li><p>在 U 盘的 ext4 或 vfat 格式 的 分区 的 <strong>根目录</strong> 中，新建一个文件夹，命名为 <code>RTC</code>，在其中放入 2 个文件：</p>
-<ul>
-<li><code>make_ro_system_for_rpi3_jessie</code>（注：从 <a href="http://192.168.38.165:8080/index.php/apps/files/?dir=/%E4%BA%A7%E5%93%81%E5%8F%91%E5%B8%83/UIPTalk%E5%AF%B9%E8%AE%B2%E7%B3%BB%E7%BB%9F/%E6%AD%A3%E5%BC%8F%E7%89%88%E6%9C%AC/%E6%9C%8D%E5%8A%A1%E5%99%A8%E8%BD%AF%E4%BB%B6/web%E6%9C%8D%E5%8A%A1%E5%99%A8%EF%BC%88%E6%A0%91%E8%8E%93%E6%B4%BETB-8000\">owncloud</a>/%E8%84%9A%E6%9C%AC&amp;fileid=39186) 下载下来后解压成文件夹）
-<br><br></li>
-<li><code>inject_new_maker.sh</code> (注：从 <a href="http://192.168.38.165:8080/index.php/apps/files/?dir=/%E4%BA%A7%E5%93%81%E5%8F%91%E5%B8%83/UIPTalk%E5%AF%B9%E8%AE%B2%E7%B3%BB%E7%BB%9F/%E6%AD%A3%E5%BC%8F%E7%89%88%E6%9C%AC/%E6%9C%8D%E5%8A%A1%E5%99%A8%E8%BD%AF%E4%BB%B6/web%E6%9C%8D%E5%8A%A1%E5%99%A8%EF%BC%88%E6%A0%91%E8%8E%93%E6%B4%BETB-8000\">owncloud</a>/%E8%84%9A%E6%9C%AC&amp;fileid=39186) 下载)
-<br><br>    </li>
-<li><p>完成后文件目录结构如下：</p>
-<p>U 盘<br>
-　　|—— RTC<br>
-　　　　　|—— make_ro_system_for_rpi3_jessie<br>
-　　　　　|　　　|—— ...很多文件<br>
-　　　　　|<br>
-　　　　　|—— inject_new_maker.sh<br>
-<br><br></p>
-</li>
-</ul>
-</li>
 <li>领取一台 TB-8000S
 <br><br></li>
-<li>安装 RTC 模块如下所示</li>
+<li>安装 RTC 模块如下所示<br>
+<strong><span style='color: #dd4b39;'>注意：断电接线，5V 和 GND 不可反接，确认后上电，否则可能烧毁模块</span></strong></li>
 </ol>
 <p><strong>—USB—USB—网口—顶部|</strong><br>
 |o o　　　　　　　　　|<br>
@@ -13164,37 +13148,19 @@ div#notebook {
 <hr>
 <hr>
 <h3 id="2.-&#26356;&#26032;&#23433;&#35013;&#21253;"><span style="color: #dd4b39;">2. &#26356;&#26032;&#23433;&#35013;&#21253;</span><a class="anchor-link" href="#2.-&#26356;&#26032;&#23433;&#35013;&#21253;">&#182;</a></h3><ol>
-<li>插入 U 盘，然后 putty 进入树莓派系统
+<li>putty 登入，把根目录重载为可写：<code>mount -o remount,rw /</code>
 <br><br></li>
-<li>把根目录重载为可写：<code>mount -o remount,rw /</code>
+<li>filezilla 登入，进入文件夹 <code>/home/pi/</code>
 <br><br></li>
-<li>创建 U 盘挂载点：<code>if [ ! -d /home/pi/usb ]; then mkdir -p /home/pi/usb; fi</code>
+<li>再进入文件夹 <code>make_ro_system_for_rpi3_jessie</code>（如果不存在则创建）
 <br><br></li>
-<li><p>找到 U 盘设备名称：<code>fdisk -l | grep ^Disk</code></p>
-<p>注：</p>
-<ul>
-<li>有可能是 <code>/dev/sda</code> 也有可能是 <code>/dev/sdb</code> 注意看</li>
-<li>以下以 <code>/dev/sda</code> 为例
+<li><code>ctrl + A</code> 选中 该文件夹内 所有文件，删除之（确认好再删除，如果没有文件则无需删除）
 <br><br></li>
-</ul>
-</li>
-<li><p>找到 U 盘分区：<code>fdisk -l</code></p>
-<p>注：</p>
-<ul>
-<li>有可能是 <code>/dev/sda</code> 或 <code>/dev/sda1</code> 也有可能是 <code>/dev/sda2</code> 注意看</li>
-<li>以下以 <code>/dev/sda</code> 为例
+<li>把 <code>make_ro_system_for_rpi3_jessie.zip</code> 上传到 该文件夹内
 <br><br></li>
-</ul>
-</li>
-<li>挂载所选 U 盘：<code>mount /dev/sda /home/pi/usb</code>
+<li>putty 进入该文件夹：<code>cd /home/pi/make_ro_system_for_rpi3_jessie</code>
 <br><br></li>
-<li>进入 U 盘：<code>cd /home/pi/usb</code>
-<br><br></li>
-<li>运行：<code>bash inject_new_maker.sh</code>
-<br><br></li>
-<li>退出 U 盘：<code>cd ~</code>
-<br><br></li>
-<li>弹出 U 盘：<code>umount /home/pi/usb</code>
+<li>解压缩：<code>unzip make_ro_system_for_rpi3_jessie.zip</code>
 <br><br></li>
 <li>把根目录重载为只读：<code>mount -o remount,ro /</code></li>
 </ol>
@@ -13215,7 +13181,7 @@ div#notebook {
 <br><br></li>
 <li>选择 <code>OK</code>
 <br><br></li>
-<li>选择 <code>finish</code></li>
+<li>选择 <code>Finish</code></li>
 </ol>
 <hr>
 <hr>
