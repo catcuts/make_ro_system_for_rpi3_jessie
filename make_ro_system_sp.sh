@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-step=4
+step=1
 #↑ 停留在第几步, 该步之前已经执行完毕
 max_step=20
 
@@ -463,6 +463,7 @@ step4(){ # reentrant
     echo -e "[ info ] 复制 iptalk 资源 完毕 ."
 
     echo -e "[ info ] 创建符号链接 ..."
+        rm -rf /var/lib/mysql
         ln -s /home/pi/hd/mysql /var/lib/mysql
         rm -rf /home/pi/src
         ln -s /home/pi/hd/src /home/pi/src
@@ -488,6 +489,8 @@ step5(){ # reentrant
         mv /etc/mysql/my.cnf /etc/mysql/my.cnf.bkup$_DATE$_TIME
 
         cp -p $base_dir/my.cnf.out /etc/mysql/my.cnf
+
+        chmod 0444 /etc/mysql/my.cnf
 
     echo "好了 ."
 }
@@ -883,10 +886,13 @@ step20(){
 
 if [ "$precondition" == "local" ]; then
 
-    if [ "`mount | grep '/dev/mmcblk0p2 on / type ext4 (ro,noatime,data=ordered)'`" != "" ]; then
-        echo -e "[ info ] 你是从 windows 过来的吧, 没加 windows 参数 . 算了 . 继续 ."
-        precondition=winux
-    else
+    # if [ "`mount | grep '/dev/mmcblk0p2 on / type ext4 (ro,noatime,data=ordered)'`" != "" ]; then
+    #     echo -e "[ info ] 你是从 windows 过来的吧, 没加 windows 参数 . 算了 . 继续 ."
+    #     precondition=winux
+    # else
+
+        mount -o remount,rw /
+        mount -o remount,rw /boot
 
         init
 
@@ -897,7 +903,7 @@ if [ "$precondition" == "local" ]; then
             echo -e "\n----------- 第 $step / $max_step 步 -----------"
             step$k
         done
-    fi
+    # fi
 
 fi
 
