@@ -1,4 +1,4 @@
-# 构建树莓派只读文件系统 + 可写移动硬盘 运行 iptalk + mysql （提高断电耐受能力）
+# 构建树莓派只读文件系统（+可写新分区或外接硬盘） 运行 iptalk + mysql （提高断电耐受能力）
 ___
 ## 目录
 
@@ -23,6 +23,8 @@ ___
 
 ___
 ## 第 1 种方式：在 windows 下使用工具写入该系统
+
+> 注意：本方法只适用于外接移动硬盘，适用于新分区的方法暂未更新
 
 **1. 登入树莓派**
 
@@ -79,6 +81,8 @@ mysqldump -uroot -proot iptalk > /home/pi/iptalk_bkup_before_ro.sql
 
 ___
 ## 第 2 种方式：在 linux 下使用工具写入该系统
+
+> 注意：本方法只适用于外接移动硬盘，适用于新分区的方法暂未更新
 
 **1. 登入树莓派**
 
@@ -150,6 +154,8 @@ ___
 
 　　首先：登入树莓派，进入 `release_make_ro_system`。
   
-　　然后：`bash make_ro_system_sp.sh`
+　　然后：  
+　　- 如果外接移动硬盘：`bash make_ro_system_sp.sh`  
+　　- 如果要创建新分区：`bash make_ro_system_sp_with_rw_partition_without_hd.sh`
 
-附：[第 3 种方式的操作视频](https://www.bilibili.com/video/av28346666/)
+附：[第 3 种方式外接移动硬盘情况的操作视频](https://www.bilibili.com/video/av28346666/)

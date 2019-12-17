@@ -35,8 +35,8 @@ NC='\033[0m' # No Color
 
 desc_step1(){ echo "停止 iptalk 和 备份 iptalk 数据库 然后停止 mysql";}
 desc_step2(){ echo "备份 mysql 数据 和 iptalk 资源";}
-desc_step3(){ echo "挂载硬盘";}
-desc_step4(){ echo "移动 mysql 数据 和 iptalk 资源 到 硬盘, 并创建从 只读系统 到 移动硬盘 的符号连接";}
+desc_step3(){ echo "创建新的读写分区";}
+desc_step4(){ echo "挂载新的读写分区，移动 mysql 数据 和 iptalk 资源 到 此分区";}
 desc_step5(){ echo "配置 mysql 运行参数";}
 desc_step6(){ echo "设置 定时清理 和 定时备份 任务";}
 desc_step7(){ echo "配置 iptalk 进程为启动项";}
@@ -129,43 +129,43 @@ init(){
 
     # ____________________________________________________________________________
 
-    echo -e "[ info ] 检查硬盘 ..."
+    # echo -e "[ info ] 检查硬盘 ..."
 
-        selected_hd=
+    #     selected_hd=
 
-        sddevlist=`ls /dev/sd*`
+    #     sddevlist=`ls /dev/sd*`
 
-        for dev in $sddevlist; do
-            fdisk -l $dev
-            sddevsize=`fdisk -l $dev | sed -n "s|Disk $dev: \([^,]*\) GiB, .*|\1|p"`
-            sddevsize=`awk "BEGIN{print $sddevsize+0 }"`
-            if [ `echo $sddevsize 900 | awk '{if($1>=$2){printf"ge"}else{printf"lt"}}'` == "ge" ]; then
-                echo -ne "上面这个是你的硬盘吗（大小: $sddevsize GB） ? [y/n] "
-                read confirmed
-                if [ "$confirmed" == "y" ]; then
-                    echo -e "用户选择了硬盘: $dev"
-                    selected_hd=$dev
-                fi
-            fi
-        done 
+    #     for dev in $sddevlist; do
+    #         fdisk -l $dev
+    #         sddevsize=`fdisk -l $dev | sed -n "s|Disk $dev: \([^,]*\) GiB, .*|\1|p"`
+    #         sddevsize=`awk "BEGIN{print $sddevsize+0 }"`
+    #         if [ `echo $sddevsize 900 | awk '{if($1>=$2){printf"ge"}else{printf"lt"}}'` == "ge" ]; then
+    #             echo -ne "上面这个是你的硬盘吗（大小: $sddevsize GB） ? [y/n] "
+    #             read confirmed
+    #             if [ "$confirmed" == "y" ]; then
+    #                 echo -e "用户选择了硬盘: $dev"
+    #                 selected_hd=$dev
+    #             fi
+    #         fi
+    #     done 
 
-        if [ -z $selected_hd ]; then
-            echo -e "${Red}[ erro ]${NC} 没有可用的硬盘 . 中止 ."
-            end 1
-        fi
+    #     if [ -z $selected_hd ]; then
+    #         echo -e "${Red}[ erro ]${NC} 没有可用的硬盘 . 中止 ."
+    #         end 1
+    #     fi
 
-    echo -e "[ info ] 检查硬盘 正常 ."
+    # echo -e "[ info ] 检查硬盘 正常 ."
 
     # ____________________________________________________________________________
 
-    echo -ne "[ info ] 复制核心文件到 /home/pi ..."
+    # echo -ne "[ info ] 复制核心文件到 /home/pi ..."
 
-        for file in check_hd.sh link_crontabs.sh start_iptalk_on_rpi3.sh sweep_old_iptalk_database_bkups.sh backup_iptalk_database.sh; do
-            cp -p $base_dir/$file /home/pi
-            chmod +x /home/pi/$file
-        done
+    #     for file in check_hd.sh link_crontabs.sh start_iptalk_on_rpi3.sh sweep_old_iptalk_database_bkups.sh backup_iptalk_database.sh; do
+    #         cp -p $base_dir/$file /home/pi
+    #         chmod +x /home/pi/$file
+    #     done
 
-    echo -e "完毕 ."
+    # echo -e "完毕 ."
 
     # ____________________________________________________________________________
 
@@ -178,8 +178,8 @@ init(){
 
     PARTUUID1=`blkid /dev/mmcblk0p1 | sed 's/.*PARTUUID=\"\(.*\)\"/\1/'`
     PARTUUID2=`blkid /dev/mmcblk0p2 | sed 's/.*PARTUUID=\"\(.*\)\"/\1/'`
-    HDUUID=`blkid $selected_hd | sed -n 's/.*UUID=\"\([^"]*\)\".*/\1/p'`
-    HDTYPE=`blkid $selected_hd | sed 's/.*TYPE="\([^"]*\)".*/\1/'`
+    # HDUUID=`blkid $selected_hd | sed -n 's/.*UUID=\"\([^"]*\)\".*/\1/p'`
+    # HDTYPE=`blkid $selected_hd | sed 's/.*TYPE="\([^"]*\)".*/\1/'`
 }
 
 # 每一步执行完毕时调用, 则 step 自增 1 (如: 第 1 步执行完毕, step=2, 即当前位(开始)于第 2 步)
@@ -207,6 +207,23 @@ end(){
         echo -e "\033[31m\033[01m\033[05m恭喜你, 圆满完成 .\033[0m"
     fi
     exit $1
+}
+
+need_reboot(){
+    last_step=$step
+    if [ $step -le $max_step ]; then
+        ((step++))
+    fi
+    sed -i "2s/step=$last_step/step=$step/" $0
+
+    echo -ne "${Brown_Orange}[ warn ]${NC} 重启 ? [yes/no] "
+
+    read cmd
+    if [ "$cmd" == "yes" ]; then
+        reboot
+    else
+        echo -e "你选择了不重启($cmd 而非 yes) 稍候使用 reboot 来重启 ."
+    fi
 }
 
 # ____________________________________________________________________________
@@ -330,64 +347,47 @@ step2(){ # reentrant
 
 # ____________________________________________________________________________
 # winux
-step3(){ # reentrant
-
-    mounted=`df -h | grep $selected_hd | awk '{print$6}'`
-
-    if [ -n "$mounted" ]; then
-        echo -ne "[ info ] 卸载硬盘 ..."
-        umount $mounted
-        mounted=`df -h | grep $selected_hd | awk '{print$6}'`
-        if [ -n "$mounted" ]; then
-            echo -e "\n${Red}[ erro ]${NC} 卸载硬盘失败. 中止 . 手动卸载后重试 ."
-            end 1
-        else
-            echo -e "好了 ."
+step3(){
+    echo -e "${Brown_Orange}[ warn ]${NC} 当前系统分区表如下: "
+        fdisk -l
+    echo -ne "\t确定继续 ? [yes/no] "
+        read confirmed
+        if [ "$confirmed" != "yes" ]; then
+            echo -e "${Red}[ erro ]${NC} 你选择了取消继续($confirmed 而非 yes) . 中止 . 确认后再试 ."
+            exit 1
         fi
-    fi
 
-    if [ "$HDTYPE" != "ext4" ]; then
-        echo -e "${Red}[ erro ]${NC} 硬盘不是 ext4 格式. 中止 . 自行格式化后重试 ."
-        end 1
-    fi
+    echo -e "[ info ] 创建新分区 ..."
+        firstp2=$((1+`fdisk -l /dev/mmcblk0 | grep /dev/mmcblk0p1 | awk '{print$3}'`))
+        firstp3=$(($firstp2+7549747+1))
+        (
+        echo p # show current partition table
+        echo d # delete partition
+        echo 2 # the second partition
+        echo n # add a new partition
+        echo p # primary partition
+        echo 2 # partition number
+        echo $firstp2 # first sector
+        echo +7549747  # last sector
+        echo p # show current partition table
+        echo n # Add a new partition
+        echo p # Primary partition
+        echo 3 # Partition number 
+        echo $firstp3  # First sector 
+        echo   # Last sector 
+        echo p # show updated partition table
+        echo w # Write changes
+        ) | fdisk /dev/mmcblk0
+    echo -e "[ info ] 创建新分区 完毕 ."
 
-    echo -ne "[ info ] 挂载硬盘 ..."
-    if [ ! -d /home/pi/hd ]; then
-        mkdir -p /home/pi/hd
-    fi
-    mount $selected_hd /home/pi/hd
-    mounted=`df -h | grep $selected_hd | awk '{print$6}'`
-    if [ "$mounted" != "/home/pi/hd" ]; then
-        echo -e "\n${Red}[ erro ]${NC} 挂载硬盘失败. 中止 . 检查后重试 ."
-        end 1
-    else
-        echo -e "好了 ."
-    fi
+    echo -e "[ info ] 格式化新分区 ..."
+        partx -a /dev/mmcblk0
+        mkfs -t ext4 /dev/mmcblk0p3
+    echo -e "[ info ] 格式化新分区 完毕 ."
 
-    for dir in src iptalk_database_bkups mysql mysqld crontabs tmp; do
-        echo -ne "[ info ] 创建 $dir ... "
-        if [ ! -d /home/pi/hd/$dir ]; then
-            mkdir -p /home/pi/hd/$dir
-            if [ $? -ne 0 ]; then
-                echo -e "异常 ! 中止 ."
-                end 1
-            fi
-        fi
-        echo -e "好了 ."
-    done
+    need_reboot
 
-    echo -ne "[ info ] 修改 /home/pi/hd/mysql mysqld \n用户:用户组 为 mysql:mysql ..."
-        chown mysql:mysql -R /home/pi/hd/mysql
-        chown mysql:mysql -R /home/pi/hd/mysqld
-    echo "好了 ."
-
-    echo -ne "[ info ] 修改 /home/pi/hd/tmp 权限 为 1777 ..."
-        chmod 1777 /home/pi/hd/tmp
-    echo "好了 ."
-
-    echo -ne "[ info ] 复制 link_crontabs.sh 到 /home/pi/hd ..."
-        cp -p $base_dir/link_crontabs.sh /home/pi/hd/    
-    echo "好了 ."
+    exit 0
 }
 
 # ____________________________________________________________________________
@@ -419,10 +419,95 @@ copy(){
     fi
 }
 # winux
-step4(){ # reentrant
+step4(){
+    
+    resize2fs /dev/mmcblk0p2
+
+    check_partition
+
+    mounted=`df -h | grep /dev/mmcblk0p3 | awk '{print$6}'`
+
+    if [ -n "$mounted" ]; then
+        echo -ne "[ info ] 卸载分区 ..."
+        umount $mounted
+        mounted=`df -h | grep /dev/mmcblk0p3 | awk '{print$6}'`
+        if [ -n "$mounted" ]; then
+            echo -e "\n${Red}[ erro ]${NC} 卸载分区失败. 中止 . 手动卸载后重试 ."
+            exit 1
+        else
+            echo -e "好了 ."
+        fi
+    fi
+
+    if [ "$P3TYPE" != "ext4" ]; then
+        echo -e "${Red}[ erro ]${NC} 分区不是 ext4 格式. 中止 . 自行格式化后重试 ."
+        exit 1
+    fi
+
+    # ________________________________________________________________________
+
+    echo -ne "[ info ] 挂载 /dev/mmcblk0p3 到 /var_temp (新分区挂载点) ..."
+        # /var_temp 只是一个临时的挂载点，重启后 /dev/mmcblk0p3 将被挂载到 /var （见 step10 修改 /etc/fstab）
+        # 在重启之前，对 /var_temp 的读写等同于对 /dev/mmcblk0p3 的读写
+        # 在重启之后，对 /var 的读写等同于对 /dev/mmcblk0p3 的读写
+        # TODO：试下先备份 /var 再直接挂载到 /var，免去 /var_temp
+        #       否则在 step4 之后如果发生重启，就没有 /var_temp 了
+        if [ ! -d /var_temp ]; then
+            mkdir -p /var_temp
+        fi
+        mount /dev/mmcblk0p3 /var_temp
+        mounted=`df -h | grep /dev/mmcblk0p3 | awk '{print$6}'`
+        if [ "$mounted" != "/var_temp" ]; then
+            echo -e "\n${Red}[ erro ]${NC} 挂载分区失败. 中止 . 检查后重试 ."
+            exit 1
+        else
+            echo -e "好了 ."
+        fi
+
+    # ________________________________________________________________________
+
+    mkdir /var_bkup /home_bkup /srv_bkup
+    echo -ne "[ info ] 备份 /var/* 到 /var_bkup ..."
+        cp -r -p /var/* /var_bkup/
+    echo "好了 ."
+    check /var /var_bkup
+
+    echo -ne "[ info ] 备份 /home/* 到 /home_bkup ..."
+        cp -r -p /home/* /home_bkup/
+        #cp -r -p /srv/* /srv_bkup/
+    echo "好了 ."
+    check /home /home_bkup
+
+    # ________________________________________________________________________
+
+    echo -ne "[ info ] 移动 /var/* 到 /var_temp ... "
+        cp -r -p /var/* /var_temp/
+    echo "好了 ."
+    check /var /var_temp
+
+    # ________________________________________________________________________
+
+    echo -ne "[ info ] 创建一些必要的文件夹 ..."
+        mkdir -p /hyt \
+        /var/local/home \
+        /var/local/srv \
+        /var/local/hyt \
+        /var_temp/local/home \
+        /var_temp/local/srv \
+        /var_temp/local/hyt
+    echo "好了 ."
+
+    echo -ne "[ info ] 移动 /home/* 到 /var_temp/local/home ..."
+        cp -r -p /home/* /var_temp/local/home
+        #cp -r -p /srv/* /var_temp/local/srv
+    echo "好了 ."    
+    check /home /var_temp/local/home
+
+    # ________________________________________________________________________
+
     echo -e "[ info ] 复制 mysql 数据 ..."
-        copy /var/lib/mysql_bkup /home/pi/hd/mysql mysql
-        chown -R mysql:mysql /home/pi/hd/mysql
+        copy /var/lib/mysql_bkup /var_temp/local/hyt/mysql mysql
+        chown -R mysql:mysql /var_temp/local/hyt/mysql
     echo -e "[ info ] 复制 mysql 数据 完毕 ."
 
     echo -e "[ info ] 复制 iptalk 资源 ..."
@@ -450,29 +535,20 @@ step4(){ # reentrant
         # fi
 
         if [ -d $base_dir/$src ]; then
-            copy $base_dir/$src /home/pi/hd/src
+            copy $base_dir/$src /var_temp/local/hyt/iptalk/src
         elif [ -d $base_dir/src ]; then
             echo -e "${Red}[ error ]${NC} 没找到 $version ."
             echo -e "${Red}[ info ]${NC} 选择了 src . 不过要注意 >0.5.7 的版本才支持只读系统 ."
-            copy $base_dir/src /home/pi/hd/src
+            copy $base_dir/src /var_temp/local/hyt/iptalk/src
         else
             echo -e "${Red}[ error ]${NC} 没找到 $version 和 src ."
             echo -e "${Red}[ info ]${NC} 选择了 src_bkup . 不过要注意 >0.5.7 的版本才支持只读系统 ."
-            copy /home/pi/src_bkup /home/pi/hd/src
+            copy /home/pi/src_bkup /var_temp/local/hyt/iptalk/src
         fi
     echo -e "[ info ] 复制 iptalk 资源 完毕 ."
 
-    echo -e "[ info ] 创建符号链接 ..."
-        rm -rf /var/lib/mysql
-        ln -s /home/pi/hd/mysql /var/lib/mysql
-        rm -rf /home/pi/src
-        ln -s /home/pi/hd/src /home/pi/src
-        mv /var/spool/cron/crontabs /var/spool/cron/crontabs_bkup
-        ln -s /home/pi/hd/crontabs /var/spool/cron/crontabs
-    echo -e "[ info ] 创建符号链接 完毕 ."
-
     echo -e "[ info ] 检查: "
-        ls -l /var/lib/mysql /home/pi/src /var/spool/cron/crontabs
+        ls -l /var_temp/local/hyt/mysql /var_temp/local/hyt/iptalk/src
     echo -ne "[ info ] 是否正确 ? [y/n] "
         read checked
         if [ "$checked" != "y" ]; then
@@ -504,7 +580,7 @@ step6(){ # reentrant
         # 清除所有遗留定时任务
         sed -i 's/^[^#].*//g' newcron
         # echo new cron into cron file
-        echo "0 */1 * * *  /home/pi/check_hd_reboot.sh" >> newcron
+        # echo "0 */1 * * *  /home/pi/check_hd_reboot.sh" >> newcron
         echo "0 0 */2 * *  /home/pi/sweep_old_iptalk_database_bkups.sh" >> newcron
         echo "0 */1 * * *  /home/pi/backup_iptalk_database.sh" >> newcron
         # install new cron file
@@ -550,8 +626,8 @@ mount -o remount,rw /
 mount -o remount,ro /
 
 {  # your 'try' block
-    bash /home/pi/check_hd.sh && \
-    bash /home/pi/start_iptalk_on_rpi3.sh &
+    bash /var/local/hyt/iptalk/check_hd.sh && \
+    bash /var/local/hyt/iptalk/start_iptalk_on_rpi3.sh &
 } || {  # your 'catch' block
     echo 'E R R O R - R U N N I N G - I P T A L K'
 }
@@ -620,12 +696,12 @@ step10(){
 
 cat << EOF > /etc/fstab
 proc            /proc           proc    defaults             0       0
-/dev/mmcblk0p1  /boot           vfat    defaults,ro          0       2
-/dev/mmcblk0p2  /               ext4    defaults,noatime,ro  0       1
-# a swapfile is not a swap partition, no line here
-#   use  dphys-swapfile swap[on|off]  for that
-
-UUID=$HDUUID /home/pi/hd ext4 defaults,nofail 0 1
+/dev/mmcblk0p1  /boot           vfat    defaults             0       2
+/dev/mmcblk0p2  /               ext4    defaults,noatime     0       1
+/dev/mmcblk0p3  /var            ext4    defaults,noatime     0       0
+/var/local/home /home           none    defaults,bind        0       0
+/var/local/srv  /srv            none    defaults,bind        0       0
+/var/local/hyt  /hyt            none    defaults,bind        0       0
 
 # For Debian Jessie
 tmpfs           /tmp            tmpfs   nosuid,nodev         0       0
