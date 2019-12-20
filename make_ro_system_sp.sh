@@ -59,6 +59,41 @@ desc_step20(){ echo "重启确认";}
 
 # ____________________________________________________________________________
 
+DATE=$(date +%Y-%m-%d)
+TIME=$(date +%H:%M:%S)
+LOGDIR="/home/pi/logs"
+_DATE="_$DATE"
+_TIME="_$TIME"
+
+# ____________________________________________________________________________
+
+# 每一步执行完毕时调用, 则 step 自增 1 (如: 第 1 步执行完毕, step=2, 即当前位(开始)于第 2 步)
+next(){
+    last_step=$step
+    if [ $step -le $max_step ]; then
+        step=$1
+        # ((step++))
+        sed -i "2s/step=$last_step/step=$step/" $0
+        if [ "$sbs" == "yes" ]; then
+            echo -ne "[ stage ] 下一步: `desc_step$step` . 继续 ? [y/n] "
+            read sbs_cmd
+            if [ "$sbs_cmd" != "y" ]; then
+                echo "中止 ."
+                end 1
+            fi
+        fi
+    fi
+}
+
+end(){
+    echo -e "${Red}[ W A R N I N G]${NC} 已退出 . 在关机前，你要手动执行下面这一句${Red}!!${NC}\n\n"\
+    "\t${Red}mount -o remount,ro / && mount -o remount,ro /boot${NC}\n"
+    if [ $1 -eq 0 ]; then
+        echo -e "\033[31m\033[01m\033[05m恭喜你, 圆满完成 .\033[0m"
+    fi
+    exit $1
+}
+
 check_params(){
     if [ `echo $1 $max_step | awk '{if($1>=$2 || $1<=0){printf"sb"}else{printf"ok"}}'` == "sb" ]; then
         echo -e "${Red}[ erro ]${NC} 步数越界! 中止 ."
@@ -67,6 +102,8 @@ check_params(){
         echo 很正常啊
     fi
 }
+
+# ____________________________________________________________________________
 
 precondition="local"
 if [ -n "$1" ]; then 
@@ -85,14 +122,6 @@ if [ -n "$1" ]; then
 fi
 
 echo -e "当前在第 $step / $max_step 步 . 前提: $precondition ."
-
-# ____________________________________________________________________________
-
-DATE=$(date +%Y-%m-%d)
-TIME=$(date +%H:%M:%S)
-LOGDIR="/home/pi/logs"
-_DATE="_$DATE"
-_TIME="_$TIME"
 
 # ____________________________________________________________________________
 
@@ -182,33 +211,6 @@ init(){
     HDTYPE=`blkid $selected_hd | sed 's/.*TYPE="\([^"]*\)".*/\1/'`
 }
 
-# 每一步执行完毕时调用, 则 step 自增 1 (如: 第 1 步执行完毕, step=2, 即当前位(开始)于第 2 步)
-next(){
-    last_step=$step
-    if [ $step -le $max_step ]; then
-        step=$1
-        # ((step++))
-        sed -i "2s/step=$last_step/step=$step/" $0
-        if [ "$sbs" == "yes" ]; then
-            echo -ne "[ stage ] 下一步: `desc_step$step` . 继续 ? [y/n] "
-            read sbs_cmd
-            if [ "$sbs_cmd" != "y" ]; then
-                echo "中止 ."
-                end 1
-            fi
-        fi
-    fi
-}
-
-end(){
-    echo -e "${Red}[ W A R N I N G]${NC} 已退出 . 在关机前，你要手动执行下面这一句${Red}!!${NC}\n\n"\
-    "\t${Red}mount -o remount,ro / && mount -o remount,ro /boot${NC}\n"
-    if [ $1 -eq 0 ]; then
-        echo -e "\033[31m\033[01m\033[05m恭喜你, 圆满完成 .\033[0m"
-    fi
-    exit $1
-}
-
 # ____________________________________________________________________________
 # winux
 step1(){ # reentrant
@@ -259,6 +261,9 @@ step1(){ # reentrant
 # ____________________________________________________________________________
 
 backup(){
+    # echo -ne "[ info ] 备份 $1 到 $1_bkup ..."
+    # copy $1 $1_bkup
+    # echo -e "好了 ."
     if [ -d $1_bkup ]; then
         echo -e "[ info ] 备份数据已存在 ."
         # if [ -d $1 ]; then
@@ -281,7 +286,7 @@ backup(){
         # fi
     else
         echo -ne "[ info ] 备份 $1 到 $1_bkup ..."
-        cp -r -p $1 $1_bkup
+        copy $1 $1_bkup
         echo -e "好了 ."
     fi
 }

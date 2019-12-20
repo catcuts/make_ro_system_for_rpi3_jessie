@@ -59,6 +59,58 @@ desc_step20(){ echo "重启确认";}
 
 # ____________________________________________________________________________
 
+DATE=$(date +%Y-%m-%d)
+TIME=$(date +%H:%M:%S)
+LOGDIR="/home/pi/logs"
+_DATE="_$DATE"
+_TIME="_$TIME"
+
+# ____________________________________________________________________________
+
+# 每一步执行完毕时调用, 则 step 自增 1 (如: 第 1 步执行完毕, step=2, 即当前位(开始)于第 2 步)
+next(){
+    last_step=$step
+    if [ $step -le $max_step ]; then
+        step=$1
+        # ((step++))
+        sed -i "2s/step=$last_step/step=$step/" $0
+        if [ "$sbs" == "yes" ]; then
+            echo -ne "[ stage ] 下一步: `desc_step$step` . 继续 ? [y/n] "
+            read sbs_cmd
+            if [ "$sbs_cmd" != "y" ]; then
+                echo "中止 ."
+                end 1
+            fi
+        fi
+    fi
+}
+
+end(){
+    echo -e "${Red}[ W A R N I N G]${NC} 已退出 . 在关机前，你要手动执行下面这一句${Red}!!${NC}\n\n"\
+    "\t${Red}mount -o remount,ro / && mount -o remount,ro /boot${NC}\n"
+    if [ $1 -eq 0 ]; then
+        echo -e "\033[31m\033[01m\033[05m恭喜你, 圆满完成 .\033[0m"
+    fi
+    exit $1
+}
+
+need_reboot(){
+    last_step=$step
+    if [ $step -le $max_step ]; then
+        ((step++))
+    fi
+    sed -i "2s/step=$last_step/step=$step/" $0
+
+    echo -ne "${Brown_Orange}[ warn ]${NC} 重启 ? [yes/no] "
+
+    read cmd
+    if [ "$cmd" == "yes" ]; then
+        reboot
+    else
+        echo -e "你选择了不重启($cmd 而非 yes) 稍候使用 reboot 来重启 ."
+    fi
+}
+
 check_params(){
     if [ `echo $1 $max_step | awk '{if($1>=$2 || $1<=0){printf"sb"}else{printf"ok"}}'` == "sb" ]; then
         echo -e "${Red}[ erro ]${NC} 步数越界! 中止 ."
@@ -67,6 +119,8 @@ check_params(){
         echo 很正常啊
     fi
 }
+
+# ____________________________________________________________________________
 
 precondition="local"
 if [ -n "$1" ]; then 
@@ -85,14 +139,6 @@ if [ -n "$1" ]; then
 fi
 
 echo -e "当前在第 $step / $max_step 步 . 前提: $precondition ."
-
-# ____________________________________________________________________________
-
-DATE=$(date +%Y-%m-%d)
-TIME=$(date +%H:%M:%S)
-LOGDIR="/home/pi/logs"
-_DATE="_$DATE"
-_TIME="_$TIME"
 
 # ____________________________________________________________________________
 
@@ -181,51 +227,6 @@ init(){
     # HDUUID=`blkid $selected_hd | sed -n 's/.*UUID=\"\([^"]*\)\".*/\1/p'`
     # HDTYPE=`blkid $selected_hd | sed 's/.*TYPE="\([^"]*\)".*/\1/'`
 }
-
-# 每一步执行完毕时调用, 则 step 自增 1 (如: 第 1 步执行完毕, step=2, 即当前位(开始)于第 2 步)
-next(){
-    last_step=$step
-    if [ $step -le $max_step ]; then
-        step=$1
-        # ((step++))
-        sed -i "2s/step=$last_step/step=$step/" $0
-        if [ "$sbs" == "yes" ]; then
-            echo -ne "[ stage ] 下一步: `desc_step$step` . 继续 ? [y/n] "
-            read sbs_cmd
-            if [ "$sbs_cmd" != "y" ]; then
-                echo "中止 ."
-                end 1
-            fi
-        fi
-    fi
-}
-
-end(){
-    echo -e "${Red}[ W A R N I N G]${NC} 已退出 . 在关机前，你要手动执行下面这一句${Red}!!${NC}\n\n"\
-    "\t${Red}mount -o remount,ro / && mount -o remount,ro /boot${NC}\n"
-    if [ $1 -eq 0 ]; then
-        echo -e "\033[31m\033[01m\033[05m恭喜你, 圆满完成 .\033[0m"
-    fi
-    exit $1
-}
-
-need_reboot(){
-    last_step=$step
-    if [ $step -le $max_step ]; then
-        ((step++))
-    fi
-    sed -i "2s/step=$last_step/step=$step/" $0
-
-    echo -ne "${Brown_Orange}[ warn ]${NC} 重启 ? [yes/no] "
-
-    read cmd
-    if [ "$cmd" == "yes" ]; then
-        reboot
-    else
-        echo -e "你选择了不重启($cmd 而非 yes) 稍候使用 reboot 来重启 ."
-    fi
-}
-
 # ____________________________________________________________________________
 # winux
 step1(){ # reentrant
@@ -298,7 +299,7 @@ backup(){
         # fi
     else
         echo -ne "[ info ] 备份 $1 到 $1_bkup ..."
-        cp -r -p $1 $1_bkup
+        copy $1 $1_bkup
         echo -e "好了 ."
     fi
 }
@@ -368,7 +369,7 @@ step3(){
         echo p # primary partition
         echo 2 # partition number
         echo $firstp2 # first sector
-        echo +7549747  # last sector
+        echo +7549747 # last sector
         echo p # show current partition table
         echo n # Add a new partition
         echo p # Primary partition
@@ -402,7 +403,9 @@ copy(){
             echo -e "你选择了保留($delete 而非 yes) ."
         else
             echo -ne "你选择了删除. 删除中 ..."
-            rm -rf $2/*
+            # 注意不要 rf -rf $2/* 因为这对软连接无效
+            rm -rf $2
+            mkdir -p $2
             echo "好了 . "
             echo -ne "复制 $1 到 $2 ..."
             cp -r -p $1/* $2/

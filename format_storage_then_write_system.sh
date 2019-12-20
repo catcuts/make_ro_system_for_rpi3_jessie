@@ -28,8 +28,8 @@ if [ "$allow" != "yes" ]; then
     exit 0
 fi
 
-df -h | grep /dev/sdb | awk '{print$6}' | xargs umount && \
-
+df -h | grep $2 | awk '{print$6}' | xargs umount && \
+echo meow
 yes | mkfs -t ext4 $2 && \
 
 echo -e "正在向 $2 写入系统 ..."
@@ -38,3 +38,8 @@ sudo gzip -dc $1 | sudo dd of=$2
 
 echo -e "写入完毕 ."
 
+if [ -d $3 ]; then
+    echo -ne "复制 ..."
+    cp -r $3 `df -h | grep /dev/sdb | grep -v "boot" | awk '{print$6}'`/home/pi/
+    echo -e "好了 ."
+fi
