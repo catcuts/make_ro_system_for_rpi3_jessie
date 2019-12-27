@@ -623,6 +623,7 @@ step10(){
 
     echo -e "[ info ] 修改 /etc/fstab ..."
 
+# EOF 不加双引号可以在内容中使用本脚本变量
 cat << EOF > /etc/fstab
 proc            /proc           proc    defaults             0       0
 /dev/mmcblk0p1  /boot           vfat    defaults,ro          0       2
