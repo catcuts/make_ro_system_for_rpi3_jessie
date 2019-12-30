@@ -67,7 +67,7 @@ next(){
 }
 
 end(){
-    echo -e "${Red}[ W A R N I N G]${NC} 已退出 . 在关机前，你要手动执行下面这一句${Red}!!${NC}\n\n"\
+    echo -e "${Red}[ W A R N I N G ]${NC} 已退出 . 在关机前，你要手动执行下面这一句${Red}!!${NC}\n\n"\
     "\t${Red}mount -o remount,ro / && mount -o remount,ro /boot${NC}\n"
     if [ $1 -eq 0 ]; then
         echo -e "\033[31m\033[01m\033[05m恭喜你, 圆满完成 .\033[0m"
@@ -157,6 +157,8 @@ init(){
 
     HDUUID=`blkid $selected_hd | sed -n 's/.*UUID=\"\([^"]*\)\".*/\1/p'`
     HDTYPE=`blkid $selected_hd | sed 's/.*TYPE="\([^"]*\)".*/\1/'`
+
+    # ____________________________________________________________________________
 
     sbs="yes"
     if [ "$1" == "notstepbystep" ]; then
@@ -260,6 +262,7 @@ mount -o remount,rw /
 mount -o remount,ro /
 
 {  # your 'try' block
+    bash /home/pi/mount_hd.sh && \
     bash /home/pi/link_crontabs.sh && \
     bash /home/pi/start_iptalk_on_rpi3.sh &
 } || {  # your 'catch' block
