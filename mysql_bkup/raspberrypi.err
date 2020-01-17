@@ -1,0 +1,46 @@
+190223  0:58:28 [Note] Plugin 'FEDERATED' is disabled.
+190223  0:58:28 InnoDB: The InnoDB memory heap is disabled
+190223  0:58:28 InnoDB: Mutexes and rw_locks use GCC atomic builtins
+190223  0:58:28 InnoDB: Compressed tables use zlib 1.2.8
+190223  0:58:28 InnoDB: Using Linux native AIO
+190223  0:58:28 InnoDB: Initializing buffer pool, size = 128.0M
+190223  0:58:28 InnoDB: Completed initialization of buffer pool
+190223  0:58:28 InnoDB: highest supported file format is Barracuda.
+190223  0:58:29  InnoDB: Waiting for the background threads to start
+190223  0:58:30 InnoDB: 5.5.62 started; log sequence number 1595685
+190223  0:58:30 [Note] Server hostname (bind-address): '0.0.0.0'; port: 3306
+190223  0:58:30 [Note]   - '0.0.0.0' resolves to '0.0.0.0';
+190223  0:58:30 [Note] Server socket created on IP: '0.0.0.0'.
+190223  0:58:30 [Note] Event Scheduler: Loaded 0 events
+190223  0:58:30 [Note] /usr/sbin/mysqld: ready for connections.
+Version: '5.5.62-0+deb8u1'  socket: '/var/run/mysqld/mysqld.sock'  port: 3306  (Raspbian)
+190223  2:21:03 [Note] /usr/sbin/mysqld: Normal shutdown
+
+190223  2:21:03 [Note] Event Scheduler: Purging the queue. 0 events
+190223  2:21:03  InnoDB: Starting shutdown...
+190223  2:21:04  InnoDB: Shutdown completed; log sequence number 1595685
+190223  2:21:04 [Note] /usr/sbin/mysqld: Shutdown complete
+
+190223 10:21:37 [Note] Plugin 'FEDERATED' is disabled.
+190223 10:21:37 InnoDB: The InnoDB memory heap is disabled
+190223 10:21:37 InnoDB: Mutexes and rw_locks use GCC atomic builtins
+190223 10:21:37 InnoDB: Compressed tables use zlib 1.2.8
+190223 10:21:37 InnoDB: Using Linux native AIO
+190223 10:21:37 InnoDB: Initializing buffer pool, size = 128.0M
+190223 10:21:37 InnoDB: Completed initialization of buffer pool
+190223 10:21:37 InnoDB: highest supported file format is Barracuda.
+190223 10:21:38  InnoDB: Waiting for the background threads to start
+190223 10:21:39 InnoDB: 5.5.62 started; log sequence number 1595685
+190223 10:21:39 [Note] Server hostname (bind-address): '0.0.0.0'; port: 3306
+190223 10:21:39 [Note]   - '0.0.0.0' resolves to '0.0.0.0';
+190223 10:21:39 [Note] Server socket created on IP: '0.0.0.0'.
+190223 10:21:39 [Note] Event Scheduler: Loaded 0 events
+190223 10:21:39 [Note] /usr/sbin/mysqld: ready for connections.
+Version: '5.5.62-0+deb8u1'  socket: '/var/run/mysqld/mysqld.sock'  port: 3306  (Raspbian)
+190223 10:42:19 [Note] /usr/sbin/mysqld: Normal shutdown
+
+190223 10:42:19 [Note] Event Scheduler: Purging the queue. 0 events
+190223 10:42:19  InnoDB: Starting shutdown...
+190223 10:42:22  InnoDB: Shutdown completed; log sequence number 1595685
+190223 10:42:22 [Note] /usr/sbin/mysqld: Shutdown complete
+
