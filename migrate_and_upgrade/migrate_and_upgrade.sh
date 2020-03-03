@@ -221,6 +221,7 @@ step5(){
 step6(){
     echo -ne "[ info ] 复制文件到第三分区 ..."
     cp -rp /hyt/* /home/pi/hd/
+    cp -p $base_dir/mount_hd.sh /home/pi/
     echo -e "好了 ."
 }
 

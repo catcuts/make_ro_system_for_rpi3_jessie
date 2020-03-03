@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 step=1
 #↑ 停留在第几步, 该步之前已经执行完毕
-max_step=10
+max_step=11
 
 base_dir=`readlink -f $(dirname $0)`
 
@@ -38,7 +38,8 @@ desc_step6(){ echo "复制 src 文件到第三分区";}
 desc_step7(){ echo "更新开机启动脚本";}
 desc_step8(){ echo "更新分区挂载配置";}
 desc_step9(){ echo "更新计划任务";}
-desc_step10(){ echo "重启";}
+desc_step10(){ echo "完善网络配置";}
+desc_step11(){ echo "重启";}
 
 # ____________________________________________________________________________
 
@@ -144,6 +145,20 @@ init(){
             end 1
         fi
 
+        if [ -f "$base_dir/log_hd.sh" ]; then
+            echo '[ info ] log_hd.sh 文件存在 .'
+        else
+            echo '[ error ] log_hd.sh 文件不存在 . 中止 .'
+            end 1
+        fi
+
+        if [ -f "$base_dir/link_crontabs.sh" ]; then
+            echo '[ info ] link_crontabs.sh 文件存在 .'
+        else
+            echo '[ error ] link_crontabs.sh 文件不存在 . 中止 .'
+            end 1
+        fi
+
     echo -e "[ info ] 检查必要文件 正常 ."
     
     # ____________________________________________________________________________
@@ -220,8 +235,10 @@ step5(){
 # 6. 复制 src 文件到第三分区
 step6(){
     echo -ne "[ info ] 复制 src 文件到第三分区 ..."
+    rm -rf $base_dir/src 
     unzip $base_dir/src.zip
     cp -r $base_dir/src /home/pi/hd/src
+    cp -p $base_dir/mount_hd.sh /home/pi/
     echo -e "好了 ."
 }
 
@@ -260,11 +277,16 @@ mount -o remount,rw /
     echo 'E R R O R - A S Y N C - T I M E'
 }
 
+{  # your 'try' block
+    bash /home/pi/link_crontabs.sh
+} || {  # your 'catch' block
+    echo 'E R R O R - L I N K - C R O N T A B'
+}
+
 mount -o remount,ro /
 
 {  # your 'try' block
     bash /home/pi/mount_hd.sh && \
-    bash /home/pi/link_crontabs.sh && \
     bash /home/pi/start_iptalk_on_rpi3.sh &
 } || {  # your 'catch' block
     echo 'E R R O R - R U N N I N G - I P T A L K'
@@ -289,7 +311,7 @@ $selected_part  /home/pi/hd     ext4    defaults,noatime     0       0
 # a swapfile is not a swap partition, no line here
 #   use  dphys-swapfile swap[on|off]  for that
 
-UUID=$HDUUID /home/pi/hd/src/data/ftp $HDTYPE defaults,nofail 0 1
+#UUID=$HDUUID /home/pi/hd/src/data/ftp $HDTYPE defaults,nofail 0 1
 
 # For Debian Jessie
 tmpfs           /tmp            tmpfs   nosuid,nodev         0       0
@@ -304,17 +326,15 @@ EOF
 # 9. 更新计划任务
 step9(){
     echo -ne "[ info ] 更新计划任务 ..."
-    touch /home/pi/log_hd.sh
-cat << "EOF" > /home/pi/log_hd.sh
-#!/bin/bash
-DATE=$(date +%Y-%m-%d)
-TIME=$(date +%H:%M:%S)
 
-mountpoint=/home/pi/hd/src/data/ftp
-
-echo "[INFO] $DATE $TIME YOU STILL ALIVE !" >> $mountpoint/hd.log
-EOF
+    cp $base_dir/log_hd.sh /home/pi/log_hd.sh 
     chmod 777 /home/pi/log_hd.sh
+
+    cp $base_dir/link_crontabs.sh /home/pi/link_crontabs.sh 
+    mv /var/spool/cron/crontabs /var/spool/cron/crontabs_bkup
+    mkdir /home/pi/crontabs
+    rm /var/spool/cron/crontabs
+    ln -s /home/pi/crontabs /var/spool/cron/crontabs
 
     # write out current crontab
     crontab -l > newcron
@@ -333,11 +353,26 @@ EOF
 
 # ____________________________________________________________________________
 
+# 10. 完善网络配置
 step10(){
-    need_reboot
+    echo -ne "[ info ] 完善网络配置 ..."
+cat << "EOF" >> /etc/network/interfaces
+
+allow-hotplug eth0
+iface eth0 inet static
+ address 192.168.1.100/24
+ gateway 192.168.1.1
+ domain_name_servers 8.8.8.8
+EOF
+    echo "好了 ."
 }
 
 # ____________________________________________________________________________
+
+step11(){
+    need_reboot
+}
+
 
 init
 
